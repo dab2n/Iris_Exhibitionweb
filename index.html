@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Iris — Exhibition</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+  body.fs,body.fs *{cursor:none!important}
+  #stage{position:absolute;inset:0;margin:auto;width:min(100vw,177.78vh);height:min(56.25vw,100vh)}
+  #stage img{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .35s ease;pointer-events:none;-webkit-user-drag:none}
+  #stage img.on{opacity:1}
+  .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;
+    background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
+  .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
+    border:solid rgba(255,255,255,.9);border-width:0 2px 2px 0}
+  #prev{left:1.2%} #prev::after{transform:translateX(15%) rotate(135deg)}
+  #next{right:1.2%} #next::after{transform:translateX(-15%) rotate(-45deg)}
+  #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;
+    background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
+  body.fs #fsbtn{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="arrow" id="prev"></div><div class="arrow" id="next"></div>
+</div>
+<button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
+<script>
+// Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
+var TABS = [['Background',2],['Research',6],['Process',4],['Design System',3],['Interface',15],['Credit',1]];
+var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
+
+var stage = document.getElementById('stage'), slides = [], tabStart = [];
+TABS.forEach(function (t, ti) {
+  tabStart.push(slides.length);
+  for (var i = 1; i <= t[1]; i++) {
+    var img = new Image();
+    img.src = 'slides/' + pad(ti + 1) + '-' + pad(i) + '.png';
+    img.alt = t[0] + ' ' + i; img.draggable = false;
+    stage.insertBefore(img, stage.firstChild);
+    slides.push(img);
+  }
+});
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+var cur = 0;
+function go(n) {
+  n = (n + slides.length) % slides.length;
+  slides[cur].classList.remove('on'); cur = n; slides[cur].classList.add('on');
+}
+go(0);
+
+// 터치: 스와이프로 앞뒤, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
+var sx = null, sy = 0;
+document.addEventListener('pointerdown', function (e) { sx = e.clientX; sy = e.clientY; lockFs(); });
+document.addEventListener('pointerup', function (e) {
+  if (sx === null) return;
+  var dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return go(cur + (dx < 0 ? 1 : -1));
+  var r = stage.getBoundingClientRect();
+  var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  if (y < NAV_H / H) {
+    if (x < 160 / W) return go(0);
+    var k = Math.floor((x * W - TAB_X) / TAB_W);
+    if (k >= 0 && k < TABS.length) return go(tabStart[k]);
+    return;
+  }
+  if (x < EDGE) go(cur - 1); else if (x > 1 - EDGE) go(cur + 1);
+});
+['contextmenu', 'dragstart', 'selectstart', 'gesturestart'].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { e.preventDefault(); });
+});
+
+// 전체화면: Esc 를 누르기 전까지는 잠금. 다른 방법으로 빠져나가면 다음 터치에 다시 전체화면.
+var userExited = false;
+function enterFs() {
+  var el = document.documentElement;
+  var p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  if (p && p.then) p.then(function () {
+    if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(function () {});
+    if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(function () {});
+  }).catch(function () {});
+}
+function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function lockFs() { if (!isFs() && !userExited) enterFs(); }
+function onFsChange() { document.body.classList.toggle('fs', isFs()); }
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { userExited = true; if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+  else if (e.key === 'f' || e.key === 'F') { userExited = false; enterFs(); }
+  else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') go(cur + 1);
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
+});
+document.addEventListener('keyup', function (e) { if (e.key === 'Escape' && !isFs()) userExited = true; });
+document.getElementById('fsbtn').addEventListener('pointerup', function (e) { e.stopPropagation(); userExited = false; enterFs(); });
+</script>
+</body>
+</html>
