@@ -24,7 +24,7 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
 ]
 # 영상 앞 정지 구간을 뒤로 보내 들어오자마자 움직이게(초). 반복 주기는 같음
 ROTATE = {'02-01b': 2.2}
-NOLOOP = {'02-04b'}
+NOLOOP = {'02-04b': 3.0}  # 한 번만 재생, 값(초)에서 잘라 마지막 장면(카드 펼쳐진 상태)에 멈춤
 FEATHER = {'03-03'}  # 좌우 끝을 배경으로 흐리게(메뉴는 slides/키-nav.png 로 위에)  # 한 번만 재생하고 마지막 장면에서 멈춤
 CANVAS_H = {'02-01': 1714, '02-04': 1953}  # 피그마 '(스크롤)' 프레임 높이
 # 플로우맵 화면 녹화(프레임N_ GIF, 2000폭): 안의 화면(302,404 1395x902)만 잘라 블록 130:5140 플로우맵 프레임 위치에
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             t = ROTATE[sl]
             vf = f"split[a][b];[a]trim=start={t},setpts=PTS-STARTPTS[x];[b]trim=end={t},setpts=PTS-STARTPTS[y];[x][y]concat," + vf
         subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-filter_complex' if sl in ROTATE else '-vf',vf,'-fps_mode','cfr','-r','50','-c:v','libx264','-crf','16','-preset','slow',
-                        '-movflags','+faststart','-an', f'{root}/{name}'], check=True)
+                        '-movflags','+faststart','-an'] + (['-t', str(NOLOOP[sl])] if sl in NOLOOP else []) + [f'{root}/{name}'], check=True)
         ch = CANVAS_H.get(sl[:5], 1080)
         out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, feather=sl in FEATHER, src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
     if not check:
