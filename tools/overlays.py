@@ -20,6 +20,8 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
  ('05-10', D+'Iris_Recording_2000.gif',           (2000,1162), (420,20,1160,1122),(860,120,992/1160)),
  ('05-11', D+'Iris_12-1.gif',                     (2000,1102), (0,0,2000,1102),   fit(2000,1102)),
 ]
+# 영상 앞 정지 구간을 뒤로 보내 들어오자마자 움직이게(초). 반복 주기는 같음
+ROTATE = {'02-02': 1.8}
 # 플로우맵 화면 녹화: 블록 130:5140 안 플로우맵 프레임(1395x902) 위치에 그대로
 for sl, f, fy, r in [('05-02','1_일반요약-플로우맵-오른쪽스크롤.gif',405,(0,90,2000,1240)),
                      ('05-03','2_화면확대-자유확대축소-오른쪽스크롤.gif',1813,(0,1490,2000,1260)),
@@ -50,7 +52,10 @@ if __name__ == '__main__':
         vf = (f"crop={round(b['crop'][2]*g)}:{round(b['crop'][3]*g)}:{round(b['crop'][0]*g)}:{round(b['crop'][1]*g)}," if b['crop'] else '') + \
              f"scale={bw}:{bh}:flags=lanczos,format=yuv420p"
         name = f'media/{sl}.mp4'
-        subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-vf',vf,'-c:v','libx264','-crf','16','-preset','slow',
+        if sl in ROTATE:
+            t = ROTATE[sl]
+            vf = f"split[a][b];[a]trim=start={t},setpts=PTS-STARTPTS[x];[b]trim=end={t},setpts=PTS-STARTPTS[y];[x][y]concat," + vf
+        subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-filter_complex' if sl in ROTATE else '-vf',vf,'-c:v','libx264','-crf','16','-preset','slow',
                         '-movflags','+faststart','-an', f'{root}/{name}'], check=True)
         out.append(dict(slide=sl, src=name, box=[bx/1920, by/1080, bw/1920, bh/1080]))
     if not check:
