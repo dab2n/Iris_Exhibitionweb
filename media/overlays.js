@@ -3,6 +3,7 @@ var OVERLAYS = [
   "slide": "02-01",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/02-01.mp4",
   "box": [
    0.0,
@@ -15,6 +16,7 @@ var OVERLAYS = [
   "slide": "02-01",
   "after": true,
   "loop": true,
+  "feather": false,
   "src": "media/02-01b.mp4",
   "box": [
    0.0,
@@ -27,6 +29,7 @@ var OVERLAYS = [
   "slide": "02-04",
   "after": true,
   "loop": false,
+  "feather": false,
   "src": "media/02-04b.mp4",
   "box": [
    0.10416666666666667,
@@ -39,18 +42,20 @@ var OVERLAYS = [
   "slide": "03-03",
   "after": false,
   "loop": true,
+  "feather": true,
   "src": "media/03-03.mp4",
   "box": [
-   0.1734375,
-   0.1111111111111111,
-   0.653125,
-   0.8870370370370371
+   0.09375,
+   0.0,
+   0.8125,
+   1.0
   ]
  },
  {
   "slide": "04-01",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/04-01.mp4",
   "box": [
    0.09010416666666667,
@@ -63,6 +68,7 @@ var OVERLAYS = [
   "slide": "05-01",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-01.mp4",
   "box": [
    0.4166666666666667,
@@ -75,6 +81,7 @@ var OVERLAYS = [
   "slide": "04-04",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/04-04.mp4",
   "box": [
    0.0,
@@ -87,6 +94,7 @@ var OVERLAYS = [
   "slide": "05-06",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-06.mp4",
   "box": [
    0.1546875,
@@ -99,6 +107,7 @@ var OVERLAYS = [
   "slide": "05-10",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-10.mp4",
   "box": [
    0.4609375,
@@ -111,6 +120,7 @@ var OVERLAYS = [
   "slide": "05-11",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-11.mp4",
   "box": [
    0.04635416666666667,
@@ -123,6 +133,7 @@ var OVERLAYS = [
   "slide": "05-02",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-02.mp4",
   "box": [
    0.21875,
@@ -135,6 +146,7 @@ var OVERLAYS = [
   "slide": "05-03",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-03.mp4",
   "box": [
    0.22291666666666668,
@@ -147,6 +159,7 @@ var OVERLAYS = [
   "slide": "05-04",
   "after": false,
   "loop": true,
+  "feather": false,
   "src": "media/05-04.mp4",
   "box": [
    0.23177083333333334,

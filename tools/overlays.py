@@ -14,7 +14,7 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
  ('02-01',  D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,0,2000,694),    (0,267,0.96)),
  ('02-01b', D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,694,2000,628),  (0,267+694*0.96,0.96)),
  ('02-04b', D+'Iris_InterviewPeel_4000.gif',       (2000,2168), (0,940,2000,1228), (200,205+940*0.76+60,0.76)),
- ('03-03', D+'Iris_DiscussionFlow_4064.mp4',      (2000,1528), (0,0,2000,1528),   fit(2000,1530)),
+ ('03-03', D+'Iris_DiscussionFlow_4064.mp4',      (2000,1528), (0,72,2000,1384),  (180,0,0.78)),
  ('04-01', D+'Iris_GridSystem_4000.gif',          (2000,1358), (0,80,2000,1220),  fit(2000,1220)),
  ('05-01', D+'Iris_FlowMap_4000.gif',             (2000,1324), (100,100,1800,1110), cy(800,1080,1800,1110)),
  ('04-04', D+'Iris_CubeSlides_2000_HQ.gif',       (2000,1064), (0,0,2000,1000),   (0,120,0.96)),
@@ -24,7 +24,8 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
 ]
 # 영상 앞 정지 구간을 뒤로 보내 들어오자마자 움직이게(초). 반복 주기는 같음
 ROTATE = {'02-01b': 2.2}
-NOLOOP = {'02-04b'}  # 한 번만 재생하고 마지막 장면에서 멈춤
+NOLOOP = {'02-04b'}
+FEATHER = {'03-03'}  # 좌우 끝을 배경으로 흐리게(메뉴는 slides/키-nav.png 로 위에)  # 한 번만 재생하고 마지막 장면에서 멈춤
 CANVAS_H = {'02-01': 1714, '02-04': 1953}  # 피그마 '(스크롤)' 프레임 높이
 # 플로우맵 화면 녹화(프레임N_ GIF, 2000폭): 안의 화면(302,404 1395x902)만 잘라 블록 130:5140 플로우맵 프레임 위치에
 for sl, f, fy, r in [('05-02','프레임1_일반요약-플로우맵-오른쪽스크롤.gif',405,(0,90,2000,1240)),
@@ -67,7 +68,7 @@ if __name__ == '__main__':
         subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-filter_complex' if sl in ROTATE else '-vf',vf,'-fps_mode','cfr','-r','50','-c:v','libx264','-crf','16','-preset','slow',
                         '-movflags','+faststart','-an', f'{root}/{name}'], check=True)
         ch = CANVAS_H.get(sl[:5], 1080)
-        out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
+        out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, feather=sl in FEATHER, src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
     if not check:
         open(f'{root}/media/overlays.js','w').write('var OVERLAYS = ' + json.dumps(out, indent=1) + ';\n')
         print(len(out), 'videos')

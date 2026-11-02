@@ -14,6 +14,7 @@
   .slide img,.slide video{position:absolute;left:0;top:0;width:100%;height:100%;-webkit-user-drag:none;object-fit:fill}
   .canvas{position:absolute;left:0;top:0;width:100%;will-change:transform}
   .slide img.nav{height:11.111%}
+  .slide video.feather{-webkit-mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent)}
   .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;
     background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
@@ -44,6 +45,8 @@ var SCROLL = {
   '02-04': { h: 1953, end: 850, delay: 6000 }
 };
 var SCROLL_MS = 1400;
+// 영상이 메뉴 영역까지 덮는 장: 메뉴(slides/키-nav.png, 투명)를 영상 위에 한 번 더 올림
+var NAV_ON_TOP = ['03-03'];
 
 var stage = document.getElementById('stage'), slides = [], tabStart = [], tabOf = [];
 TABS.forEach(function (t, ti) {
@@ -62,9 +65,10 @@ TABS.forEach(function (t, ti) {
       v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
       v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
       v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
+      if (ov.feather) v.className = 'feather';
       cv.appendChild(v); el.videos.push(v);
     });
-    if (sc) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = 'nav'; nv.draggable = false; el.appendChild(nv); }
+    if (sc || NAV_ON_TOP.indexOf(key) >= 0) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = 'nav'; nv.draggable = false; el.appendChild(nv); }
     stage.insertBefore(el, stage.firstChild);
     slides.push(el); tabOf.push(ti);
   }
