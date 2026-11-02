@@ -58,7 +58,7 @@ TABS.forEach(function (t, ti) {
     OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
       if (ov.slide !== key) return;
       var v = document.createElement('video');
-      v.src = ov.src; v.muted = v.loop = v.playsInline = true; v.preload = 'auto'; v.after = ov.after;
+      v.src = ov.src; v.muted = v.playsInline = true; v.loop = ov.loop !== false; v.preload = 'auto'; v.after = ov.after;
       v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
       v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
       v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
@@ -73,6 +73,16 @@ function pad(n) { return (n < 10 ? '0' : '') + n; }
 function play(v) { v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
 
 var cur = 0, timers = [];
+// 스크롤 장: off = 위로 올라간 거리(px, 1920x1080 기준). 자동 스크롤 + 손으로 위아래 드래그
+function setOff(el, off, ms) {
+  var sc = el.scroll; off = Math.max(0, Math.min(sc.h - H, off)); el.off = off;
+  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms cubic-bezier(.65,0,.35,1)' : 'none';
+  el.canvas.style.transform = 'translateY(' + (-off / sc.h * 100) + '%)';
+  if (!el.afterStarted && off >= sc.end * 0.5) {  // 아래 내용이 보이면 그 영상 재생
+    el.afterStarted = true;
+    setTimeout(function () { if (el.classList.contains('on')) el.videos.forEach(function (v) { if (v.after) play(v); }); }, ms || 0);
+  }
+}
 function go(n) {
   n = (n + slides.length) % slides.length;
   timers.forEach(clearTimeout); timers = [];
@@ -80,30 +90,40 @@ function go(n) {
   if (old !== slides[n]) setTimeout(function () {
     if (old.classList.contains('on')) return;
     old.videos.forEach(function (v) { v.pause(); v.currentTime = 0; });
-    old.canvas.style.transition = 'none'; old.canvas.style.transform = '';
+    if (old.scroll) setOff(old, 0);
   }, 400);
   cur = n; var el = slides[cur]; el.classList.add('on');
   el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); v.currentTime = 0; } });
   var sc = el.scroll;
   if (sc) {
-    el.canvas.style.transition = 'none'; el.canvas.style.transform = '';
-    timers.push(setTimeout(function () {
-      el.canvas.style.transition = 'transform ' + SCROLL_MS + 'ms cubic-bezier(.65,0,.35,1)';
-      el.canvas.style.transform = 'translateY(' + (-sc.end / sc.h * 100) + '%)';
-    }, sc.delay));
-    timers.push(setTimeout(function () {
-      el.videos.forEach(function (v) { if (v.after) play(v); });
-    }, sc.delay + SCROLL_MS));
+    el.afterStarted = false; setOff(el, 0);
+    timers.push(setTimeout(function () { setOff(el, sc.end, SCROLL_MS); }, sc.delay));
   }
 }
 go(0);
 
-// 터치: 스와이프로 앞뒤, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
-var sx = null, sy = 0;
-document.addEventListener('pointerdown', function (e) { sx = e.clientX; sy = e.clientY; lockFs(); });
+// 터치: 좌우 스와이프로 앞뒤, 스크롤 장은 위아래 드래그, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
+var sx = null, sy = 0, dragging = false, startOff = 0;
+document.addEventListener('pointerdown', function (e) {
+  sx = e.clientX; sy = e.clientY; dragging = false; startOff = slides[cur].off || 0; lockFs();
+});
+document.addEventListener('pointermove', function (e) {
+  var el = slides[cur];
+  if (sx === null || !el.scroll) return;
+  var dx = e.clientX - sx, dy = e.clientY - sy;
+  if (!dragging && Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+    dragging = true; timers.forEach(clearTimeout); timers = [];  // 직접 움직이면 자동 스크롤 취소
+  }
+  if (dragging) setOff(el, startOff - dy * H / stage.getBoundingClientRect().height);
+});
+document.addEventListener('wheel', function (e) {
+  var el = slides[cur]; if (!el.scroll) return;
+  timers.forEach(clearTimeout); timers = []; setOff(el, (el.off || 0) + e.deltaY);
+}, { passive: true });
 document.addEventListener('pointerup', function (e) {
   if (sx === null) return;
   var dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+  if (dragging) { dragging = false; return; }
   if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return go(cur + (dx < 0 ? 1 : -1));
   var r = stage.getBoundingClientRect();
   var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;

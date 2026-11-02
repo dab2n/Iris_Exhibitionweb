@@ -4,7 +4,7 @@ recording 은 블록이 아닌 화면 녹화라 r 대신 box 를 직접 지정."
 import json, os, subprocess, sys
 from PIL import Image
 H = os.path.expanduser('~')
-D = H + '/Desktop/'; DL = H + '/Downloads/iris-gif/화면만/'
+D = H + '/Desktop/'; DL = H + '/Downloads/iris-gif/'
 def fit(rw, rh):
     s = min(1920 / rw, 960 / rh); return ((1920 - rw * s) / 2, 120 + (960 - rh * s) / 2, s)
 def cy(x, w, rw, rh):
@@ -14,6 +14,7 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
  ('02-01',  D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,0,2000,694),    (0,267,0.96)),
  ('02-01b', D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,694,2000,628),  (0,267+694*0.96,0.96)),
  ('02-04b', D+'Iris_InterviewPeel_4000.gif',       (2000,2168), (0,940,2000,1228), (200,205+940*0.76+60,0.76)),
+ ('03-03', D+'Iris_DiscussionFlow_4064.mp4',      (2000,1528), (0,0,2000,1528),   fit(2000,1530)),
  ('04-01', D+'Iris_GridSystem_4000.gif',          (2000,1358), (0,80,2000,1220),  fit(2000,1220)),
  ('05-01', D+'Iris_FlowMap_4000.gif',             (2000,1324), (100,100,1800,1110), cy(800,1080,1800,1110)),
  ('04-04', D+'Iris_CubeSlides_2000_HQ.gif',       (2000,1064), (0,0,2000,1000),   (0,120,0.96)),
@@ -23,17 +24,18 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
 ]
 # 영상 앞 정지 구간을 뒤로 보내 들어오자마자 움직이게(초). 반복 주기는 같음
 ROTATE = {'02-01b': 2.2}
+NOLOOP = {'02-04b'}  # 한 번만 재생하고 마지막 장면에서 멈춤
 CANVAS_H = {'02-01': 1714, '02-04': 1953}  # 피그마 '(스크롤)' 프레임 높이
-# 플로우맵 화면 녹화: 블록 130:5140 안 플로우맵 프레임(1395x902) 위치에 그대로
-for sl, f, fy, r in [('05-02','1_일반요약-플로우맵-오른쪽스크롤.gif',405,(0,90,2000,1240)),
-                     ('05-03','2_화면확대-자유확대축소-오른쪽스크롤.gif',1813,(0,1490,2000,1260)),
-                     ('05-04','3_플로우맵카드선택-원문확인.gif',3402,(0,3040,2000,1300))]:
+# 플로우맵 화면 녹화(프레임N_ GIF, 2000폭): 안의 화면(302,404 1395x902)만 잘라 블록 130:5140 플로우맵 프레임 위치에
+for sl, f, fy, r in [('05-02','프레임1_일반요약-플로우맵-오른쪽스크롤.gif',405,(0,90,2000,1240)),
+                     ('05-03','프레임2_화면확대-자유확대축소-오른쪽스크롤.gif',1813,(0,1490,2000,1260)),
+                     ('05-04','프레임3_플로우맵카드선택-원문확인.gif',3402,(0,3040,2000,1300))]:
     x, y, s = fit(r[2], r[3])
     O.append((sl, DL+f, None, None, (x + 302*s, y + (fy - r[1])*s, s, 1395*s, 902*s)))
 
 def boxes(o):
     sl, gif, B, r, p = o
-    if B is None: return dict(box=p[:2]+p[3:], crop=None)
+    if B is None: return dict(box=p[:2]+p[3:], crop=(302, 404, 1395, 902))
     x, y, s = p; rx, ry, rw, rh = r
     rh = min(rh, B[1] - ry)  # 블록 끝에서 자름
     return dict(box=(x, y, rw*s, rh*s), crop=(rx, ry, rw, rh))
@@ -45,7 +47,12 @@ if __name__ == '__main__':
     for o in O:
         sl, gif = o[0], o[1]; b = boxes(o)
         bx, by, bw, bh = [round(v) for v in b['box']]; bw -= bw % 2; bh -= bh % 2
-        im = Image.open(gif); g = im.size[0] / (o[2][0] if o[2] else im.size[0])
+        if gif.endswith('.mp4'):
+            sw = int(subprocess.check_output(['ffprobe','-v','error','-select_streams','v','-show_entries','stream=width','-of','csv=p=0',gif]))
+            if check: continue
+        else:
+            im = Image.open(gif); sw = im.size[0]
+        g = sw / (o[2][0] if o[2] else sw)
         if check:
             im.seek(im.n_frames - 1); fr = im.convert('RGB')
             if b['crop']: fr = fr.crop(tuple(round(v*g) for v in (b['crop'][0], b['crop'][1], b['crop'][0]+b['crop'][2], b['crop'][1]+b['crop'][3])))
@@ -57,10 +64,10 @@ if __name__ == '__main__':
         if sl in ROTATE:
             t = ROTATE[sl]
             vf = f"split[a][b];[a]trim=start={t},setpts=PTS-STARTPTS[x];[b]trim=end={t},setpts=PTS-STARTPTS[y];[x][y]concat," + vf
-        subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-filter_complex' if sl in ROTATE else '-vf',vf,'-c:v','libx264','-crf','16','-preset','slow',
+        subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-filter_complex' if sl in ROTATE else '-vf',vf,'-fps_mode','cfr','-r','50','-c:v','libx264','-crf','16','-preset','slow',
                         '-movflags','+faststart','-an', f'{root}/{name}'], check=True)
         ch = CANVAS_H.get(sl[:5], 1080)
-        out.append(dict(slide=sl[:5], after=sl.endswith('b'), src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
+        out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
     if not check:
         open(f'{root}/media/overlays.js','w').write('var OVERLAYS = ' + json.dumps(out, indent=1) + ';\n')
         print(len(out), 'videos')
