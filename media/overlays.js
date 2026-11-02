@@ -4,6 +4,7 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "t",
   "src": "media/02-01.mp4",
   "box": [
    0.0,
@@ -17,6 +18,7 @@ var OVERLAYS = [
   "after": true,
   "loop": true,
   "feather": false,
+  "fade": "b",
   "src": "media/02-01b.mp4",
   "box": [
    0.0,
@@ -30,11 +32,12 @@ var OVERLAYS = [
   "after": true,
   "loop": false,
   "feather": false,
+  "fade": "tb",
   "src": "media/02-04b.mp4",
   "box": [
-   0.10416666666666667,
+   0.0,
    0.5012800819252432,
-   0.7916666666666666,
+   1.0,
    0.47721454173067074
   ]
  },
@@ -43,6 +46,7 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": true,
+  "fade": "",
   "src": "media/03-03.mp4",
   "box": [
    0.09375,
@@ -56,12 +60,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/04-01.mp4",
   "box": [
-   0.09010416666666667,
-   0.1111111111111111,
-   0.8197916666666667,
-   0.8888888888888888
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
@@ -69,25 +74,27 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-01.mp4",
   "box": [
-   0.4166666666666667,
-   0.24722222222222223,
-   0.5625,
-   0.6166666666666667
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
-  "slide": "04-04",
+  "slide": "04-03",
   "after": false,
   "loop": true,
   "feather": false,
-  "src": "media/04-04.mp4",
+  "fade": "",
+  "src": "media/04-03.mp4",
   "box": [
    0.0,
-   0.1111111111111111,
+   0.0,
    1.0,
-   0.8888888888888888
+   1.0
   ]
  },
  {
@@ -95,12 +102,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-06.mp4",
   "box": [
-   0.1546875,
-   0.1111111111111111,
-   0.6895833333333333,
-   0.8888888888888888
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
@@ -108,12 +116,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-10.mp4",
   "box": [
-   0.4609375,
-   0.1388888888888889,
-   0.4895833333333333,
-   0.8425925925925926
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
@@ -121,12 +130,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-11.mp4",
   "box": [
-   0.04635416666666667,
-   0.1111111111111111,
-   0.9072916666666667,
-   0.8888888888888888
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
@@ -134,12 +144,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-02.mp4",
   "box": [
-   0.21875,
-   0.337037037037037,
-   0.5625,
-   0.6462962962962963
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
@@ -147,12 +158,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-03.mp4",
   "box": [
-   0.22291666666666668,
-   0.3388888888888889,
-   0.553125,
-   0.6351851851851852
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  },
  {
@@ -160,12 +172,13 @@ var OVERLAYS = [
   "after": false,
   "loop": true,
   "feather": false,
+  "fade": "",
   "src": "media/05-04.mp4",
   "box": [
-   0.23177083333333334,
-   0.35833333333333334,
-   0.5364583333333334,
-   0.6166666666666667
+   0.0,
+   0.0,
+   1.0,
+   1.0
   ]
  }
 ];
