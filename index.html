@@ -9,8 +9,8 @@
     -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
   body.fs,body.fs *{cursor:none!important}
   #stage{position:absolute;inset:0;margin:auto;width:min(100vw,177.78vh);height:min(56.25vw,100vh)}
-  #stage img{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .35s ease;pointer-events:none;-webkit-user-drag:none}
-  #stage img.on{opacity:1}
+  #stage img,#stage video{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .35s ease;pointer-events:none;-webkit-user-drag:none}
+  #stage img.on,#stage video.on{opacity:1}
   .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;
     background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
@@ -31,13 +31,20 @@
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
 var TABS = [['Background',2],['Research',6],['Process',4],['Design System',3],['Interface',15],['Credit',1]];
 var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
+// 움직이는 장: 같은 슬라이드에 애니메이션 부분만 넣은 반복 영상(motion/). 들어올 때마다 처음부터 재생
+var MOTION = { '02-06': 'interview', '04-01': 'grid', '05-05': 'cube', '05-07': 'figjam' };
 
 var stage = document.getElementById('stage'), slides = [], tabStart = [];
 TABS.forEach(function (t, ti) {
   tabStart.push(slides.length);
   for (var i = 1; i <= t[1]; i++) {
-    var img = new Image();
-    img.src = 'slides/' + pad(ti + 1) + '-' + pad(i) + '.png';
+    var key = pad(ti + 1) + '-' + pad(i), img;
+    if (MOTION[key]) {
+      img = document.createElement('video');
+      img.src = 'motion/' + MOTION[key] + '.mp4'; img.poster = 'slides/' + key + '.png';
+      img.muted = img.loop = img.playsInline = true; img.preload = 'auto';
+      img.setAttribute('muted', ''); img.setAttribute('playsinline', '');
+    } else { img = new Image(); img.src = 'slides/' + key + '.png'; }
     img.alt = t[0] + ' ' + i; img.draggable = false;
     stage.insertBefore(img, stage.firstChild);
     slides.push(img);
@@ -48,7 +55,10 @@ function pad(n) { return (n < 10 ? '0' : '') + n; }
 var cur = 0;
 function go(n) {
   n = (n + slides.length) % slides.length;
-  slides[cur].classList.remove('on'); cur = n; slides[cur].classList.add('on');
+  var old = slides[cur]; old.classList.remove('on');
+  if (old.pause && old !== slides[n]) setTimeout(function () { if (!old.classList.contains('on')) old.pause(); }, 400);
+  cur = n; var el = slides[cur]; el.classList.add('on');
+  if (el.play) { el.currentTime = 0; var p = el.play(); if (p && p.catch) p.catch(function () {}); }
 }
 go(0);
 
