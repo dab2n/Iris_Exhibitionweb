@@ -55,9 +55,9 @@ var OVERLAYS = [
   ]
  },
  {
-  "slide": "05-05",
+  "slide": "04-04",
   "after": false,
-  "src": "media/05-05.mp4",
+  "src": "media/04-04.mp4",
   "box": [
    0.0,
    0.1111111111111111,
@@ -66,9 +66,9 @@ var OVERLAYS = [
   ]
  },
  {
-  "slide": "05-07",
+  "slide": "05-06",
   "after": false,
-  "src": "media/05-07.mp4",
+  "src": "media/05-06.mp4",
   "box": [
    0.1546875,
    0.1111111111111111,

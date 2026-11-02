@@ -33,7 +33,9 @@
 <script src="media/overlays.js"></script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
-var TABS = [['Background',2],['Research',4],['Process',4],['Design System',3],['Interface',15],['Credit',1]];
+var TABS = [['Background',2],['Research',4],['Process',4],['Design System',4],['Interface',14],['Credit',1]];
+// 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. 메뉴 왼쪽 Web/Mobile 버튼(x 320~540) 터치 영역
+var SUBS = { 4: [['Web', 0], ['Mobile', 9]] }, SUB_X = 320, SUB_W = 110;
 var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
 // 스크롤 장: 피그마 '(스크롤)' 프레임. slides/키.png = 세로로 긴 Content, 키-nav.png = 고정 메뉴(투명).
 // delay 뒤 end(px)만큼 위로 스크롤하고, 끝나면 after 영상 재생.
@@ -43,7 +45,7 @@ var SCROLL = {
 };
 var SCROLL_MS = 1400;
 
-var stage = document.getElementById('stage'), slides = [], tabStart = [];
+var stage = document.getElementById('stage'), slides = [], tabStart = [], tabOf = [];
 TABS.forEach(function (t, ti) {
   tabStart.push(slides.length);
   for (var i = 1; i <= t[1]; i++) {
@@ -64,7 +66,7 @@ TABS.forEach(function (t, ti) {
     });
     if (sc) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = 'nav'; nv.draggable = false; el.appendChild(nv); }
     stage.insertBefore(el, stage.firstChild);
-    slides.push(el);
+    slides.push(el); tabOf.push(ti);
   }
 });
 function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -108,6 +110,8 @@ document.addEventListener('pointerup', function (e) {
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
   if (y < NAV_H / H) {
     if (x < 160 / W) return go(0);
+    var sub = SUBS[tabOf[cur]], j = Math.floor((x * W - SUB_X) / SUB_W);
+    if (sub && j >= 0 && j < sub.length) return go(tabStart[tabOf[cur]] + sub[j][1]);
     var k = Math.floor((x * W - TAB_X) / TAB_W);
     if (k >= 0 && k < TABS.length) return go(tabStart[k]);
     return;
