@@ -9,9 +9,11 @@
     -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
   body.fs,body.fs *{cursor:none!important}
   #stage{position:absolute;inset:0;margin:auto;width:min(100vw,177.78vh);height:min(56.25vw,100vh)}
-  .slide{position:absolute;inset:0;opacity:0;transition:opacity .35s ease;pointer-events:none}
+  .slide{position:absolute;inset:0;overflow:hidden;opacity:0;transition:opacity .35s ease;pointer-events:none}
   .slide.on{opacity:1}
   .slide img,.slide video{position:absolute;left:0;top:0;width:100%;height:100%;-webkit-user-drag:none;object-fit:fill}
+  .canvas{position:absolute;left:0;top:0;width:100%;will-change:transform}
+  .slide img.nav{height:11.111%}
   .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;
     background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
@@ -31,38 +33,66 @@
 <script src="media/overlays.js"></script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
-var TABS = [['Background',2],['Research',6],['Process',4],['Design System',3],['Interface',15],['Credit',1]];
+var TABS = [['Background',2],['Research',4],['Process',4],['Design System',3],['Interface',15],['Credit',1]];
 var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
+// 스크롤 장: 피그마 '(스크롤)' 프레임. slides/키.png = 세로로 긴 Content, 키-nav.png = 고정 메뉴(투명).
+// delay 뒤 end(px)만큼 위로 스크롤하고, 끝나면 after 영상 재생.
+var SCROLL = {
+  '02-01': { h: 1714, end: 634, delay: 6000 },
+  '02-04': { h: 1953, end: 850, delay: 6000 }
+};
+var SCROLL_MS = 1400;
 
 var stage = document.getElementById('stage'), slides = [], tabStart = [];
 TABS.forEach(function (t, ti) {
   tabStart.push(slides.length);
   for (var i = 1; i <= t[1]; i++) {
-    var key = pad(ti + 1) + '-' + pad(i), el = document.createElement('div'), img = new Image();
-    el.className = 'slide'; img.src = 'slides/' + key + '.png'; img.alt = t[0] + ' ' + i; img.draggable = false;
-    el.appendChild(img);
-    var ov = OVERLAYS.filter(function (o) { return o.slide === key; })[0];
-    if (ov) {  // GIF 로 만든 움직이는 부분: 슬라이드 그림 위 같은 자리에 반복 영상 (media/, tools/overlays.py 로 생성)
-      var v = el.video = document.createElement('video');
-      v.src = ov.src; v.muted = v.loop = v.playsInline = true; v.preload = 'auto';
+    var key = pad(ti + 1) + '-' + pad(i), sc = SCROLL[key];
+    var el = document.createElement('div'), cv = document.createElement('div'), img = new Image();
+    el.className = 'slide'; el.videos = []; el.scroll = sc; el.canvas = cv;
+    cv.className = 'canvas'; cv.style.height = (sc ? sc.h / H : 1) * 100 + '%';
+    img.src = 'slides/' + key + '.png'; img.alt = t[0] + ' ' + i; img.draggable = false;
+    cv.appendChild(img); el.appendChild(cv);
+    OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
+      if (ov.slide !== key) return;
+      var v = document.createElement('video');
+      v.src = ov.src; v.muted = v.loop = v.playsInline = true; v.preload = 'auto'; v.after = ov.after;
       v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
       v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
       v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
-      el.appendChild(v);
-    }
+      cv.appendChild(v); el.videos.push(v);
+    });
+    if (sc) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = 'nav'; nv.draggable = false; el.appendChild(nv); }
     stage.insertBefore(el, stage.firstChild);
     slides.push(el);
   }
 });
 function pad(n) { return (n < 10 ? '0' : '') + n; }
+function play(v) { v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
 
-var cur = 0;
+var cur = 0, timers = [];
 function go(n) {
   n = (n + slides.length) % slides.length;
+  timers.forEach(clearTimeout); timers = [];
   var old = slides[cur]; old.classList.remove('on');
-  if (old.video && old !== slides[n]) setTimeout(function () { if (!old.classList.contains('on')) old.video.pause(); }, 400);
+  if (old !== slides[n]) setTimeout(function () {
+    if (old.classList.contains('on')) return;
+    old.videos.forEach(function (v) { v.pause(); v.currentTime = 0; });
+    old.canvas.style.transition = 'none'; old.canvas.style.transform = '';
+  }, 400);
   cur = n; var el = slides[cur]; el.classList.add('on');
-  if (el.video) { el.video.currentTime = 0; var p = el.video.play(); if (p && p.catch) p.catch(function () {}); }
+  el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); v.currentTime = 0; } });
+  var sc = el.scroll;
+  if (sc) {
+    el.canvas.style.transition = 'none'; el.canvas.style.transform = '';
+    timers.push(setTimeout(function () {
+      el.canvas.style.transition = 'transform ' + SCROLL_MS + 'ms cubic-bezier(.65,0,.35,1)';
+      el.canvas.style.transform = 'translateY(' + (-sc.end / sc.h * 100) + '%)';
+    }, sc.delay));
+    timers.push(setTimeout(function () {
+      el.videos.forEach(function (v) { if (v.after) play(v); });
+    }, sc.delay + SCROLL_MS));
+  }
 }
 go(0);
 

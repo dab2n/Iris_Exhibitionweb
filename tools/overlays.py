@@ -10,9 +10,10 @@ def fit(rw, rh):
 def cy(x, w, rw, rh):
     s = w / rw; return (x, 120 + (960 - rh * s) / 2, s)
 O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
- ('02-01', D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,0,2000,694),    fit(2000,694)),
- ('02-02', D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,694,2000,628),  fit(2000,628)),
- ('02-06', D+'Iris_InterviewPeel_4000.gif',       (2000,2168), (0,940,2000,1228), fit(2000,1228)),
+ # 스크롤 장(세로로 긴 캔버스, CANVAS_H): 키 끝 b = 스크롤이 끝난 뒤 재생
+ ('02-01',  D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,0,2000,694),    (0,267,0.96)),
+ ('02-01b', D+'Iris_StartingQuestion_v3_2000.gif', (2000,1322), (0,694,2000,628),  (0,267+694*0.96,0.96)),
+ ('02-04b', D+'Iris_InterviewPeel_4000.gif',       (2000,2168), (0,940,2000,1228), (200,205+940*0.76+60,0.76)),
  ('04-01', D+'Iris_GridSystem_4000.gif',          (2000,1358), (0,80,2000,1220),  fit(2000,1220)),
  ('05-01', D+'Iris_FlowMap_4000.gif',             (2000,1324), (100,100,1800,1110), cy(800,1080,1800,1110)),
  ('05-05', D+'Iris_CubeSlides_2000_HQ.gif',       (2000,1064), (0,0,2000,1000),   (0,120,0.96)),
@@ -21,7 +22,8 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
  ('05-11', D+'Iris_12-1.gif',                     (2000,1102), (0,0,2000,1102),   fit(2000,1102)),
 ]
 # 영상 앞 정지 구간을 뒤로 보내 들어오자마자 움직이게(초). 반복 주기는 같음
-ROTATE = {'02-02': 1.8}
+ROTATE = {'02-01b': 2.2}
+CANVAS_H = {'02-01': 1714, '02-04': 1953}  # 피그마 '(스크롤)' 프레임 높이
 # 플로우맵 화면 녹화: 블록 130:5140 안 플로우맵 프레임(1395x902) 위치에 그대로
 for sl, f, fy, r in [('05-02','1_일반요약-플로우맵-오른쪽스크롤.gif',405,(0,90,2000,1240)),
                      ('05-03','2_화면확대-자유확대축소-오른쪽스크롤.gif',1813,(0,1490,2000,1260)),
@@ -47,7 +49,7 @@ if __name__ == '__main__':
         if check:
             im.seek(im.n_frames - 1); fr = im.convert('RGB')
             if b['crop']: fr = fr.crop(tuple(round(v*g) for v in (b['crop'][0], b['crop'][1], b['crop'][0]+b['crop'][2], b['crop'][1]+b['crop'][3])))
-            base = Image.open(f'{root}/slides/{sl}.png').convert('RGB'); base.paste(fr.resize((bw, bh)), (bx, by))
+            base = Image.open(f'{root}/slides/{sl[:5]}.png').convert('RGB'); base.paste(fr.resize((bw, bh)), (bx, by))
             base.save(f'/private/tmp/claude-501/-Users-bugi/06fa9a8d-6a63-4309-b4cc-1ac1b1af8b0e/scratchpad/gif/chk_{sl}.png'); continue
         vf = (f"crop={round(b['crop'][2]*g)}:{round(b['crop'][3]*g)}:{round(b['crop'][0]*g)}:{round(b['crop'][1]*g)}," if b['crop'] else '') + \
              f"scale={bw}:{bh}:flags=lanczos,format=yuv420p"
@@ -57,7 +59,8 @@ if __name__ == '__main__':
             vf = f"split[a][b];[a]trim=start={t},setpts=PTS-STARTPTS[x];[b]trim=end={t},setpts=PTS-STARTPTS[y];[x][y]concat," + vf
         subprocess.run(['ffmpeg','-y','-loglevel','error','-i',gif,'-filter_complex' if sl in ROTATE else '-vf',vf,'-c:v','libx264','-crf','16','-preset','slow',
                         '-movflags','+faststart','-an', f'{root}/{name}'], check=True)
-        out.append(dict(slide=sl, src=name, box=[bx/1920, by/1080, bw/1920, bh/1080]))
+        ch = CANVAS_H.get(sl[:5], 1080)
+        out.append(dict(slide=sl[:5], after=sl.endswith('b'), src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
     if not check:
         open(f'{root}/media/overlays.js','w').write('var OVERLAYS = ' + json.dumps(out, indent=1) + ';\n')
         print(len(out), 'videos')
