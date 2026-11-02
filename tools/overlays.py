@@ -4,7 +4,7 @@ recording 은 블록이 아닌 화면 녹화라 r 대신 box 를 직접 지정."
 import json, os, subprocess, sys
 from PIL import Image
 H = os.path.expanduser('~')
-D = H + '/Desktop/'; DL = H + '/Downloads/iris-gif/'
+D = H + '/Desktop/'; DL = H + '/Downloads/iris-gif/화면만/'
 def fit(rw, rh):
     s = min(1920 / rw, 960 / rh); return ((1920 - rw * s) / 2, 120 + (960 - rh * s) / 2, s)
 def cy(x, w, rw, rh):
@@ -18,7 +18,7 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
  ('05-01', D+'Iris_FlowMap_4000.gif',             (2000,1324), (100,100,1800,1110), cy(800,1080,1800,1110)),
  ('04-04', D+'Iris_CubeSlides_2000_HQ.gif',       (2000,1064), (0,0,2000,1000),   (0,120,0.96)),
  ('05-06', D+'Iris_FigjamPlugin_Flow_2000.gif',   (2000,1449), (0,0,2000,1449),   fit(2000,1449)),
- ('05-10', D+'Iris_Recording_2000.gif',           (2000,1162), (420,20,1160,1122),(860,120,992/1160)),
+ ('05-10', D+'Iris_Recording_2000.gif',           (2000,1162), (420,20,1160,1122),(885,150,0.811)),
  ('05-11', D+'Iris_12-1.gif',                     (2000,1102), (0,0,2000,1102),   fit(2000,1102)),
 ]
 # 영상 앞 정지 구간을 뒤로 보내 들어오자마자 움직이게(초). 반복 주기는 같음
