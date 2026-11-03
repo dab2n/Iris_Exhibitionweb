@@ -38,7 +38,7 @@
 <script src="media/overlays.js"></script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
-var TABS = [['Background',2],['Research',4],['Process',4],['Design System',3],['Interface',15],['Credit',1]];
+var TABS = [['Background',2],['Research',4],['Process',5],['Design System',3],['Interface',15],['Credit',1]];
 // 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. Interface 메뉴 아래 작은 글씨(x 1506~1634, y 86~135) 터치 영역
 var SUBS = { 4: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1506, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
 var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
@@ -47,11 +47,12 @@ var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
 var SCROLL = {
   '02-01': { h: 1714, end: 634, delay: 4000 },
   '02-04': { h: 1953, end: 850, delay: 4000 },
+  '03-03': { h: 2110, end: 1030, delay: 4000 },
   '04-02': { h: 1869, end: 789, delay: 4000 }
 };
 var SCROLL_MS = 1400;
 // 영상이 메뉴 영역까지 덮는 장: 메뉴(slides/키-nav.png, 투명)를 영상 위에 한 번 더 올림
-var NAV_ON_TOP = ['03-03'];
+var NAV_ON_TOP = ['03-04'];
 
 var stage = document.getElementById('stage'), slides = [], tabStart = [], tabOf = [];
 TABS.forEach(function (t, ti) {

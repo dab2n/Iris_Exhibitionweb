@@ -42,12 +42,12 @@ var OVERLAYS = [
   ]
  },
  {
-  "slide": "03-03",
+  "slide": "03-04",
   "after": false,
   "loop": true,
   "feather": true,
   "fade": "",
-  "src": "media/03-03.mp4",
+  "src": "media/03-04.mp4",
   "box": [
    0.09375,
    0.0,
