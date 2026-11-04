@@ -30,17 +30,20 @@
     mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 40px),transparent),linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent)}
   .win > div{position:absolute}
   .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;z-index:5;
-    background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none;
-    box-shadow:0 2px 12px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08)}
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);pointer-events:none;
+    box-shadow:0 0 0 1px rgba(0,0,0,.06),0 2px 12px rgba(0,0,0,.14),0 1px 3px rgba(0,0,0,.08);transition:opacity .4s ease,background .4s ease,box-shadow .4s ease}
   body.portrait .arrow{width:6%;margin-top:-3%}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
-    border:solid rgba(255,255,255,.9);border-width:0 2px 2px 0}
+    border:solid rgba(17,17,17,.78);border-width:0 2px 2px 0;transition:border-color .4s ease}
+  /* 어두운 장: 반투명 흰 원 + 흰 화살표 (밝은 장은 위의 흰 원 + 검은 화살표) */
+  .arrow.dark{background:rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(255,255,255,.32),0 2px 14px rgba(0,0,0,.35)}
+  .arrow.dark::after{border-color:#fff}
   #prev{left:3.6%} #prev::after{transform:translateX(15%) rotate(135deg)}
   #next{right:3.6%} #next::after{transform:translateX(-15%) rotate(-45deg)}
   /* 스크롤 장: 맨 아래까지 내려가기 전엔 다음 버튼을 흐리게(막힘), 내려가면 다시 켜지며 한 번 살짝 커짐 */
-  .arrow{transition:opacity .4s ease} #next.off{opacity:.22}
+  #next.off{opacity:.3}
   #next.ready{animation:ready .9s ease 2}
-  @keyframes ready{50%{transform:scale(1.18);background:rgba(127,127,127,.32)}}
+  @keyframes ready{50%{transform:scale(1.18)}}
   #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
@@ -53,7 +56,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104191715';
+var V = 'v261104192759';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -119,6 +122,11 @@ function sampleBg(img, el) {  // 화면 밖(비율이 맞지 않을 때 남는 �
   img.addEventListener('load', function () {
     try { var c = document.createElement('canvas').getContext('2d'); c.drawImage(img, -4, -4); var d = c.getImageData(0, 0, 1, 1).data;
       el.bg = 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')'; if (el.classList.contains('on')) document.body.style.background = el.bg;
+      // 버튼이 놓이는 자리(왼쪽·오른쪽 가운데)의 밝기 → 어두우면 흰 버튼
+      var iw = img.naturalWidth, ih = Math.min(img.naturalHeight, iw * 9 / 16);
+      el.dark = [0.036, 0.93].map(function (fx) { var L = 0; c.clearRect(0, 0, 40, 40); c.drawImage(img, iw * fx, ih * 0.47, iw * 0.034, ih * 0.06, 0, 0, 20, 20);
+        var q = c.getImageData(0, 0, 20, 20).data; for (var i = 0; i < q.length; i += 4) L += 0.2126 * q[i] + 0.7152 * q[i + 1] + 0.0722 * q[i + 2]; return L / 400 < 140; });
+      if (el.classList.contains('on')) arrowTheme(el);
       if (el.scroll && el.navEl && !PORT) el.navEl.style.background = 'linear-gradient(' + el.bg + ' 83.3%, transparent)'; } catch (e) {}
   });
 }
@@ -137,7 +145,8 @@ TABS.forEach(function (t, ti) {
           var s = this.parentNode; if (s === slides[cur] && !s.manual && this.currentTime * 1000 >= s.scroll.delay + SCROLL_MS - 60) unlockNext(); });
         cam.addEventListener('timeupdate', function () {  // 영상이 실제로 돌기 시작하면 그때 HTML 메뉴를 숨김(영상에 메뉴가 그려져 있음)
           var s = this.parentNode; if (s.manual) { this.pause(); return; } if (this.currentTime > 0.05 && s.navEl) s.navEl.style.visibility = 'hidden'; });
-        cam.addEventListener('ended', function () { if (this.loopFrom != null && this.parentNode.classList.contains('on')) { this.currentTime = this.loopFrom; this.play(); } });
+        // 끝나면 되감지 않음(TV 는 되감을 때 앞 장면이 보여 화면이 위로 튐) → 맨 아래에 둔 긴 이미지 + 그 안 영상 반복으로 넘김
+        cam.addEventListener('ended', function () { var s = this.parentNode; if (this.loopFrom != null && s === slides[cur]) manual(s); });
       }
       if (navOnTop) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png?' + V; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
     } else {
@@ -154,6 +163,7 @@ TABS.forEach(function (t, ti) {
     slides.push(el); tabOf.push(ti);
   }
 });
+function arrowTheme(el) { var d = el.dark || []; document.getElementById('prev').classList.toggle('dark', !!d[0]); nextBtn.classList.toggle('dark', !!d[1]); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function play(v) { attach(v); if (v.currentTime) v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
 // 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
@@ -216,7 +226,7 @@ function go(n) {
       if (old.cam) { old.cam.pause(); old.cam.style.visibility = ''; old.manual = false; if (old.navEl) old.navEl.style.visibility = 'hidden'; }
     }, 400);
   }
-  cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg;
+  cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; arrowTheme(el);
   warm(n);
   el.maxOff = 0; nextBtn.classList.remove('ready');
   if (el.scroll) lockNext(); else { nextLocked = false; nextBtn.classList.remove('off'); }
@@ -241,7 +251,12 @@ window.addEventListener('resize', function () { if (!FORCE && (window.innerHeigh
 // 터치: 좌우 스와이프로 앞뒤, 스크롤 장은 위아래 드래그, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
 var sx = null, sy = 0, dragging = false, startOff = 0;
 var idleT = null;
-function poke() { clearTimeout(idleT); idleT = setTimeout(function () { if (cur !== 0) go(0); poke(); }, IDLE_MS); }
+function poke() { clearTimeout(idleT); idleT = setTimeout(function () { if (cur !== 0) go(0); poke(); checkUpdate(); }, IDLE_MS); }
+function checkUpdate() {
+  fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
+    var m = t.match(/var V = '([^']+)'/); if (m && m[1] !== V && cur === 0) location.reload();
+  }).catch(function () {});
+}
 poke();
 ['pointerdown', 'keydown', 'wheel'].forEach(function (ev) { document.addEventListener(ev, poke, { passive: true }); });
 document.addEventListener('pointerdown', function (e) {
