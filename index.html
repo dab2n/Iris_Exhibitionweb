@@ -10,24 +10,31 @@
   body{transition:background-color .35s}
   body.fs,body.fs *{cursor:none!important}
   #stage{position:absolute;inset:0;margin:auto;width:min(100vw,177.78vh);height:min(56.25vw,100vh)}
-  .slide{position:absolute;inset:0;overflow:hidden;opacity:0;transition:opacity .35s ease;pointer-events:none}
-  .slide.on{opacity:1}
+  body.portrait #stage{width:min(100vw,56.25vh);height:min(177.78vw,100vh)}
+  /* 장 전환: 새 장이 위에서 서서히 나타나고 이전 장은 그 아래 그대로 있다가 사라짐(둘 다 반투명해지며 바탕이 비치던 깜빡임 방지) */
+  .slide{position:absolute;inset:0;overflow:hidden;opacity:0;visibility:hidden;z-index:0;pointer-events:none}
+  .slide.on{opacity:1;visibility:visible;z-index:2;transition:opacity .35s ease}
+  .slide.prev{opacity:1;visibility:visible;z-index:1}
   .slide img,.slide video{position:absolute;left:0;top:0;width:100%;height:100%;-webkit-user-drag:none;object-fit:fill}
-  .canvas{position:absolute;left:0;top:0;width:100%;will-change:transform}
+  .canvas{position:absolute;left:0;top:0;width:100%;will-change:transform;backface-visibility:hidden}
   .slide img.nav{height:11.111%}
-  /* 스크롤 장 메뉴: 장 배경색을 깔고 아래 24px 은 흐리게 — 올라가는 콘텐츠가 메뉴 글자와 겹치지 않게 */
   .slide img.nav.solid{height:13.333%;object-fit:contain;object-position:top}
-  .slide video.fade-t{-webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
-  .slide video.fade-b{-webkit-mask-image:linear-gradient(#000 calc(100% - 40px),transparent);mask-image:linear-gradient(#000 calc(100% - 40px),transparent)}
-  .slide video.fade-tb{-webkit-mask-image:linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent)}
   .slide video.feather{-webkit-mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent)}
-  .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;
+  /* 세로 화면: 가로 장의 영역(창)을 잘라 다시 배치. 창 가장자리는 배경으로 흐림 */
+  .win{position:absolute;overflow:hidden}
+  .win.fade{
+    -webkit-mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 40px),transparent),linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent);
+    -webkit-mask-composite:source-in;mask-composite:intersect;
+    mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 40px),transparent),linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent)}
+  .win > div{position:absolute}
+  .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;z-index:5;
     background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
+  body.portrait .arrow{width:6%;margin-top:-3%}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
     border:solid rgba(255,255,255,.9);border-width:0 2px 2px 0}
   #prev{left:1.2%} #prev::after{transform:translateX(15%) rotate(135deg)}
   #next{right:1.2%} #next::after{transform:translateX(-15%) rotate(-45deg)}
-  #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;
+  #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
 </style>
@@ -37,51 +44,88 @@
   <div class="arrow" id="prev"></div><div class="arrow" id="next"></div>
 </div>
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
-<script src="media/overlays.js"></script>
+<script>
+// 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
+var V = 'v261104172006';
+document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
+</script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
-var TABS = [['Background',2],['Research',4],['Process',5],['Design System',3],['Interface',15],['Credit',1]];
-// 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. Interface 메뉴 아래 작은 글씨(x 1506~1634, y 86~135) 터치 영역
-var SUBS = { 4: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1506, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
-var W = 1920, H = 1080, NAV_H = 120, TAB_X = 760, TAB_W = 180, EDGE = 0.12;
+var TABS = [['Background',2],['Research',4],['Process',3],['Design System',4],['Scenario',1],['Interface',15],['Credit',1]];
+// 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. Interface 메뉴 아래 작은 글씨(x 1536~1664, y 86~135) 터치 영역
+var SUBS = { 5: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1536, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
+var W = 1920, H = 1080, NAV_H = 120, TAB_X = 720, TAB_W = 160, EDGE = 0.12;
 // 스크롤 장: 피그마 '(스크롤)' 프레임. slides/키.png = 세로로 긴 Content, 키-nav.png = 고정 메뉴(투명).
-// delay 뒤 end(px)만큼 위로 스크롤하고, 끝나면 after 영상 재생.
+// delay 뒤 end(px)만큼 위로 스크롤하고, 끝나면 after 영상 재생. 세로 화면에서는 한 번에 다 보이므로 delay 뒤 영상만 재생
 var SCROLL = {
   '02-01': { h: 1714, end: 634, delay: 4000 },
   '02-04': { h: 1953, end: 850, delay: 4000 },
   '03-03': { h: 2110, end: 1030, delay: 4000 },
-  '04-02': { h: 1869, end: 789, delay: 4000 }
+  '04-03': { h: 1869, end: 789, delay: 4000 }
 };
-var SCROLL_MS = 1400;
+var SCROLL_MS = 1800, SCROLL_EASE = 'cubic-bezier(.4,0,.2,1)';
 // 영상이 메뉴 영역까지 덮는 장: 메뉴(slides/키-nav.png, 투명)를 영상 위에 한 번 더 올림
-var NAV_ON_TOP = ['03-04'];
+var NAV_ON_TOP = ['04-01'];
+// 세로 화면(스탠바이미 2 세로): 1440x2560 기준. tools/portrait.py 가 만든 media/portrait.js 의 창 배치를 씀
+// P 키: 가로 화면에서도 세로 배치 미리보기(다시 누르면 해제). 기기에서는 화면 방향을 그대로 따름
+var FORCE = null; try { FORCE = sessionStorage.getItem('iris-port'); } catch (e) {}
+var PORT = FORCE ? FORCE === '1' : window.innerHeight > window.innerWidth, PW = 1440, PH = 2560, PK = PW / W;  // 메뉴는 가로 메뉴를 0.75 배
+if (PORT) document.body.classList.add('portrait');
+var SW = PORT ? PW : W, SH = PORT ? PH : H;  // 지금 화면 좌표계
 
 var stage = document.getElementById('stage'), slides = [], tabStart = [], tabOf = [];
+function pct(v, of) { return v / of * 100 + '%'; }
+// 가로 캔버스(1920 x ch) 한 벌: 장 PNG + (with 이면) 영상. 영상 목록은 vids 에 모음
+function buildCanvas(key, ch, withVideo, vids) {
+  var cv = document.createElement('div'), img = new Image();
+  cv.className = 'canvas'; cv.style.height = ch / H * 100 + '%';
+  img.src = 'slides/' + key + '.png?' + V; img.draggable = false; cv.appendChild(img);
+  if (withVideo) OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
+    if (ov.slide !== key) return;
+    var v = document.createElement('video');
+    v.src = ov.src + '?' + V; v.muted = v.playsInline = true; v.loop = ov.loop !== false; v.preload = 'auto'; v.after = ov.after;
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
+    v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
+    v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
+    if (ov.feather) v.className = 'feather';
+    cv.appendChild(v); vids.push(v);
+  });
+  return { cv: cv, img: img };
+}
+// 세로: 가로 캔버스의 s(x,y,w,h) 영역을 세로 화면 (dx,dy) 에 k 배로
+function win(key, ch, s, dx, dy, k, withVideo, vids, cls) {
+  var w = document.createElement('div'), c = buildCanvas(key, ch, withVideo, vids), inner = c.cv;
+  w.className = 'win' + (cls ? ' ' + cls : '');
+  w.style.left = pct(dx, PW); w.style.top = pct(dy, PH); w.style.width = pct(s[2] * k, PW); w.style.height = pct(s[3] * k, PH);
+  inner.style.width = pct(W, s[2]); inner.style.height = pct(ch, s[3]); inner.style.left = pct(-s[0], s[2]); inner.style.top = pct(-s[1], s[3]);
+  w.appendChild(inner); return { el: w, img: c.img };
+}
+function sampleBg(img, el) {  // 화면 밖(비율이 맞지 않을 때 남는 곳) 배경 = 장 왼쪽 위 색
+  img.addEventListener('load', function () {
+    try { var c = document.createElement('canvas').getContext('2d'); c.drawImage(img, -4, -4); var d = c.getImageData(0, 0, 1, 1).data;
+      el.bg = 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')'; if (el.classList.contains('on')) document.body.style.background = el.bg;
+      if (el.scroll && el.navEl && !PORT) el.navEl.style.background = 'linear-gradient(' + el.bg + ' 83.3%, transparent)'; } catch (e) {}
+  });
+}
 TABS.forEach(function (t, ti) {
   tabStart.push(slides.length);
   for (var i = 1; i <= t[1]; i++) {
-    var key = pad(ti + 1) + '-' + pad(i), sc = SCROLL[key];
-    var el = document.createElement('div'), cv = document.createElement('div'), img = new Image();
-    el.className = 'slide'; el.videos = []; el.scroll = sc; el.canvas = cv;
-    cv.className = 'canvas'; cv.style.height = (sc ? sc.h / H : 1) * 100 + '%';
-    img.src = 'slides/' + key + '.png'; img.alt = t[0] + ' ' + i; img.draggable = false;
-    cv.appendChild(img); el.appendChild(cv);
-    img.onload = function () {  // 화면 밖(비율이 16:9 가 아닐 때 남는 곳) 배경 = 슬라이드 왼쪽 위 색
-      try { var c = document.createElement('canvas').getContext('2d'); c.drawImage(this, -4, -4); var d = c.getImageData(0, 0, 1, 1).data;
-        var s = this.parentNode.parentNode; s.bg = 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')'; if (s.classList.contains('on')) document.body.style.background = s.bg;
-        if (s.scroll && s.navEl) s.navEl.style.background = 'linear-gradient(' + s.bg + ' 83.3%, transparent)'; } catch (e) {}
-    };
-    OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
-      if (ov.slide !== key) return;
-      var v = document.createElement('video');
-      v.src = ov.src; v.muted = v.playsInline = true; v.loop = ov.loop !== false; v.preload = 'auto'; v.after = ov.after;
-      v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
-      v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
-      v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
-      if (ov.feather) v.className = 'feather'; else if (ov.fade) v.className = 'fade-' + ov.fade;
-      cv.appendChild(v); el.videos.push(v);
-    });
-    if (sc || NAV_ON_TOP.indexOf(key) >= 0) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
+    var key = pad(ti + 1) + '-' + pad(i), sc = SCROLL[key], ch = sc ? sc.h : H, navOnTop = sc || NAV_ON_TOP.indexOf(key) >= 0;
+    var el = document.createElement('div');
+    el.className = 'slide'; el.videos = []; el.scroll = sc; el.key = key;
+    if (!PORT) {
+      var c = buildCanvas(key, ch, true, el.videos); el.canvas = c.cv; el.appendChild(c.cv); sampleBg(c.img, el);
+      if (navOnTop) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png?' + V; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
+    } else {
+      var P = PORTRAIT[key], first = null;
+      el.style.background = 'linear-gradient(' + P.bg.join(',') + ')';
+      P.wins.forEach(function (q) { var r = win(key, ch, q.slice(0, 4), q[4], q[5], q[6], q[7], el.videos, q[8] ? 'fade' : ''); el.appendChild(r.el); first = first || r.img; });
+      if (navOnTop) {  // 투명 메뉴를 배경색 위에
+        var nb = document.createElement('div'); nb.className = 'win navwin'; nb.style.cssText = 'left:0;top:0;width:100%;height:' + pct(NAV_H * PK, PH) + ';background:' + P.nav;
+        var nv2 = new Image(); nv2.src = 'slides/' + key + '-nav.png?' + V; nv2.draggable = false; nb.appendChild(nv2); el.appendChild(nb);
+      } else el.appendChild(win(key, ch, [0, 0, W, NAV_H], 0, 0, PK, false, [], 'navwin').el);
+      sampleBg(first, el);
+    }
     stage.insertBefore(el, stage.firstChild);
     slides.push(el); tabOf.push(ti);
   }
@@ -90,34 +134,43 @@ function pad(n) { return (n < 10 ? '0' : '') + n; }
 function play(v) { v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
 
 var cur = 0, timers = [];
-// 스크롤 장: off = 위로 올라간 거리(px, 1920x1080 기준). 자동 스크롤 + 손으로 위아래 드래그
+// 스크롤 장(가로): off = 위로 올라간 거리(px, 1920x1080 기준). 자동 스크롤 + 손으로 위아래 드래그
+function startAfter(el, ms) {
+  if (el.afterStarted) return; el.afterStarted = true;
+  setTimeout(function () { if (el.classList.contains('on')) el.videos.forEach(function (v) { if (v.after) play(v); }); }, ms || 0);
+}
 function setOff(el, off, ms) {
   var sc = el.scroll; off = Math.max(0, Math.min(sc.h - H, off)); el.off = off;
-  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms cubic-bezier(.65,0,.35,1)' : 'none';
-  el.canvas.style.transform = 'translateY(' + (-off / sc.h * 100) + '%)';
-  if (!el.afterStarted && off >= sc.end * 0.5) {  // 아래 내용이 보이면 그 영상 재생
-    el.afterStarted = true;
-    setTimeout(function () { if (el.classList.contains('on')) el.videos.forEach(function (v) { if (v.after) play(v); }); }, ms || 0);
-  }
+  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + SCROLL_EASE : 'none';
+  el.canvas.style.transform = 'translate3d(0,' + (-off / sc.h * 100) + '%,0)';
+  if (off >= sc.end * 0.5) startAfter(el, ms);  // 아래 내용이 보이면 그 영상 재생
 }
 function go(n) {
   n = (n + slides.length) % slides.length;
   timers.forEach(clearTimeout); timers = [];
-  var old = slides[cur]; old.classList.remove('on');
-  if (old !== slides[n]) setTimeout(function () {
-    if (old.classList.contains('on')) return;
-    old.videos.forEach(function (v) { v.pause(); v.currentTime = 0; });
-    if (old.scroll) setOff(old, 0);
-  }, 400);
+  var old = slides[cur];
+  slides.forEach(function (s) { if (s !== old) s.classList.remove('prev'); });
+  if (old !== slides[n]) {
+    old.classList.remove('on'); old.classList.add('prev');
+    setTimeout(function () {
+      if (old.classList.contains('on')) return;
+      old.classList.remove('prev');
+      old.videos.forEach(function (v) { v.pause(); v.currentTime = 0; });
+      if (old.scroll && !PORT) setOff(old, 0);
+    }, 400);
+  }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg;
   el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); v.currentTime = 0; } });
   var sc = el.scroll;
   if (sc) {
-    el.afterStarted = false; setOff(el, 0);
-    timers.push(setTimeout(function () { setOff(el, sc.end, SCROLL_MS); }, sc.delay));
+    el.afterStarted = false;
+    if (PORT) timers.push(setTimeout(function () { startAfter(el, 0); }, sc.delay));
+    else { setOff(el, 0); timers.push(setTimeout(function () { setOff(el, sc.end, SCROLL_MS); }, sc.delay)); }
   }
 }
 go(0);
+// 화면 방향이 바뀌면(가로↔세로) 그 배치로 다시 그림
+window.addEventListener('resize', function () { if (!FORCE && (window.innerHeight > window.innerWidth) !== PORT) location.reload(); });
 
 // 터치: 좌우 스와이프로 앞뒤, 스크롤 장은 위아래 드래그, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
 var sx = null, sy = 0, dragging = false, startOff = 0;
@@ -126,7 +179,7 @@ document.addEventListener('pointerdown', function (e) {
 });
 document.addEventListener('pointermove', function (e) {
   var el = slides[cur];
-  if (sx === null || !el.scroll) return;
+  if (sx === null || !el.scroll || PORT) return;
   var dx = e.clientX - sx, dy = e.clientY - sy;
   if (!dragging && Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
     dragging = true; timers.forEach(clearTimeout); timers = [];  // 직접 움직이면 자동 스크롤 취소
@@ -134,7 +187,7 @@ document.addEventListener('pointermove', function (e) {
   if (dragging) setOff(el, startOff - dy * H / stage.getBoundingClientRect().height);
 });
 document.addEventListener('wheel', function (e) {
-  var el = slides[cur]; if (!el.scroll) return;
+  var el = slides[cur]; if (!el.scroll || PORT) return;
   timers.forEach(clearTimeout); timers = []; setOff(el, (el.off || 0) + e.deltaY);
 }, { passive: true });
 document.addEventListener('pointerup', function (e) {
@@ -145,11 +198,13 @@ document.addEventListener('pointerup', function (e) {
   var r = stage.getBoundingClientRect();
   var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
-  var sub = SUBS[tabOf[cur]], j = Math.floor((x * W - SUB_X) / SUB_W);
-  if (sub && y > SUB_Y0 / H && y < SUB_Y1 / H && j >= 0 && j < sub.length) return go(tabStart[tabOf[cur]] + sub[j][1]);
-  if (y < NAV_H / H) {
-    if (x < 160 / W) return go(0);
-    var k = Math.floor((x * W - TAB_X) / TAB_W);
+  // 메뉴 좌표(가로 1920 기준)로 바꿈: 세로 화면의 메뉴는 가로 메뉴를 PK 배 한 것
+  var mx = PORT ? x * PW / PK : x * W, my = PORT ? y * PH / PK : y * H;
+  var sub = SUBS[tabOf[cur]], j = Math.floor((mx - SUB_X) / SUB_W);
+  if (sub && my > SUB_Y0 && my < SUB_Y1 && j >= 0 && j < sub.length) return go(tabStart[tabOf[cur]] + sub[j][1]);
+  if (my < NAV_H) {
+    if (mx < 160) return go(0);
+    var k = Math.floor((mx - TAB_X) / TAB_W);
     if (k >= 0 && k < TABS.length) return go(tabStart[k]);
     return;
   }
@@ -177,6 +232,7 @@ document.addEventListener('webkitfullscreenchange', onFsChange);
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') { userExited = true; if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
   else if (e.key === 'f' || e.key === 'F') { userExited = false; enterFs(); }
+  else if (e.key === 'p' || e.key === 'P') { try { if (FORCE) sessionStorage.removeItem('iris-port'); else sessionStorage.setItem('iris-port', PORT ? '0' : '1'); } catch (x) {} location.reload(); }
   else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') go(cur + 1);
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
 });
