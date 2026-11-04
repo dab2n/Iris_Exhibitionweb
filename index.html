@@ -48,6 +48,10 @@
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
   /* Process 온톨로지 장: 하단 고정 '온톨로지 보러가기' → 시각화 앱을 전시 화면 위에 띄움(전체화면 유지), 오른쪽 위 '돌아가기' */
+  .grow-l{position:absolute;inset:0;width:100%;height:100%;background-size:100% 100%;clip-path:var(--c0);-webkit-clip-path:var(--c0)}
+  .slide.grow .grow-l{clip-path:var(--c1);-webkit-clip-path:var(--c1);transition:clip-path var(--t) cubic-bezier(.22,.61,.36,1) var(--d),-webkit-clip-path var(--t) cubic-bezier(.22,.61,.36,1) var(--d)}
+  /* 새로 불러온 영상은 첫 장면이 준비되면 서서히 나타남(Design System 처음 들어갈 때 등) */
+  .slide video{transition:opacity .5s ease}
   .pill{position:absolute;z-index:8;border:0;border-radius:999px;display:flex;align-items:center;gap:.5em;white-space:nowrap;
     font:500 clamp(13px,0.94vw,18px)/1 "SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;letter-spacing:-.01em;
     transition:opacity .35s ease,transform .2s ease}
@@ -72,7 +76,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104215612';
+var V = 'v261104220536';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -97,6 +101,12 @@ var SCROLL_MS = 1800, SCROLL_EASE = 'cubic-bezier(.37,0,.63,1)';  // 사인 곡�
 // 손으로 끌거나 휠을 돌리면 그때부터 긴 이미지로 바꿔 직접 움직임. loop = 이 초부터 끝까지 반복(null 이면 끝 장면에서 멈춤)
 var CAM = { '02-01': { loop: 5.8 }, '02-04': { loop: null } };
 function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (1 - Math.cos(Math.PI * p)) / 2; }
+// Research 02 그래프: s0 = 그래프 없는 배경, s1 = 줄무늬(40%) 없는 막대. 100%·44.2% 가 같이 차오르고, 100% 가 다 차면 40% 줄무늬가 차오름
+var GROW = { '02-02': [
+  { img: '-s0', x0: 960, x1: 1745, y1: 920, top: 360, from: 360, ms: 0, delay: 0 },
+  { img: '-s1', x0: 960, x1: 1396, y1: 920, top: 360, ms: 1200, delay: 350 },
+  { img: '-s1', x0: 1396, x1: 1745, y1: 920, top: 630, ms: 1200, delay: 350 },
+  { img: '', x0: 972, x1: 1396, y1: 898, top: 718, ms: 900, delay: 1600 } ] };
 var IDLE_MS = 60000;  // 1분 동안 조작이 없으면 첫 장(Background)으로
 // 영상이 메뉴 영역까지 덮는 장: 메뉴(slides/키-nav.png, 투명)를 영상 위에 한 번 더 올림
 var NAV_ON_TOP = ['04-01'];
@@ -170,6 +180,11 @@ TABS.forEach(function (t, ti) {
         // 끝나면 되감지 않음(TV 는 되감을 때 앞 장면이 보여 화면이 위로 튐) → 맨 아래에 둔 긴 이미지 + 그 안 영상 반복으로 넘김
         cam.addEventListener('ended', function () { var s = this.parentNode; if (this.loopFrom != null && s === slides[cur]) manual(s); });
       }
+      if (GROW[key]) GROW[key].forEach(function (g) {  // 막대 그래프가 아래에서 차오름(장에 들어올 때마다)
+        var d = document.createElement('div'); d.className = 'grow-l'; d.style.backgroundImage = 'url(slides/' + key + g.img + '.png?' + V + ')';
+        var i = function (t) { return 'inset(' + t / H * 100 + '% ' + (W - g.x1) / W * 100 + '% ' + (H - g.y1) / H * 100 + '% ' + g.x0 / W * 100 + '%)'; };
+        d.style.setProperty('--c0', i(g.from == null ? g.y1 : g.from)); d.style.setProperty('--c1', i(g.top));
+        d.style.setProperty('--t', g.ms + 'ms'); d.style.setProperty('--d', g.delay + 'ms'); c.cv.appendChild(d); });
       if (navOnTop) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png?' + V; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
     } else {
       var P = PORTRAIT[key], first = null;
@@ -198,10 +213,20 @@ var prevBtn = document.getElementById('prev'), lastTheme = '';
 })();
 function arrowTheme(el) { lastTheme = ''; var d = el.dark || []; document.getElementById('prev').classList.toggle('dark', !!d[0]); nextBtn.classList.toggle('dark', !!d[1]); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
-function play(v) { attach(v); if (v.currentTime) v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+function play(v) {
+  attach(v);
+  if (v.classList.contains('feather') && v.currentTime) {  // 다시 들어올 때 지난 마지막 장면이 비치지 않게 숨겼다가 처음 장면부터 서서히
+    v.style.transition = 'none'; v.style.opacity = 0; void v.offsetWidth; v.style.transition = '';
+    v.addEventListener('playing', function () { v.style.opacity = ''; }, { once: true });
+  }
+  if (v.currentTime) v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {});
+}
 // 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
 // 영상이 준비되기 전에는 그 아래 PNG 에 영상 첫 프레임이 그대로 들어 있어(tools/bake.py) 바뀌는 티가 나지 않음
-function attach(v) { if (!v.getAttribute('src')) { v.src = v.dataset.src; v.preload = 'auto'; } }
+function attach(v) {
+  if (v.getAttribute('src')) return; v.src = v.dataset.src; v.preload = 'auto';
+  if (v.classList.contains('feather')) { v.style.opacity = 0; v.addEventListener('playing', function () { v.style.opacity = ''; }, { once: true }); }
+}
 function detach(v) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } }
 function allVideos(s) { return s.cam ? s.videos.concat([s.cam]) : s.videos; }
 function warm(n) {
@@ -260,7 +285,8 @@ function go(n) {
       if (old.cam) { old.cam.pause(); old.cam.style.visibility = ''; old.manual = false; if (old.navEl) old.navEl.style.visibility = 'hidden'; }
     }, 400);
   }
-  cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
+  cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; if (GROW[el.key] && !PORT) { el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow'); }
+  arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
   warm(n);
   el.maxOff = 0; nextBtn.classList.remove('ready');
   if (el.scroll) lockNext(); else { nextLocked = false; nextBtn.classList.remove('off'); }
@@ -376,6 +402,16 @@ document.addEventListener('keydown', function (e) {
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
 });
 document.addEventListener('keyup', function (e) { if (e.key === 'Escape' && !isFs()) userExited = true; });
+// 터치 화면에서 전체화면 풀기: 왼쪽 위 로고를 3초 길게 누르면 전체화면 해제(주소창이 보임) + 다시 잠그지 않음.
+// 다시 전체화면은 오른쪽 아래 '전체화면' 버튼이나 F 키
+var holdT = null;
+document.addEventListener('pointerdown', function (e) {
+  var r = stage.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+  if (!PORT && x < 160 && y < NAV_H || PORT && x < 160 / PK && y < NAV_H / PK) holdT = setTimeout(function () {
+    holdT = null; userExited = true; sx = null; if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); }, 3000);
+}, true);
+['pointerup', 'pointercancel', 'pointermove'].forEach(function (ev) { document.addEventListener(ev, function (e) {
+  if (holdT && (ev !== 'pointermove' || Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 20)) { clearTimeout(holdT); holdT = null; } }, true); });
 document.getElementById('fsbtn').addEventListener('pointerup', function (e) { e.stopPropagation(); userExited = false; enterFs(); });
 </script>
 </body>
