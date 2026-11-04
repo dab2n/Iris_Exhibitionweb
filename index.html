@@ -18,6 +18,8 @@
   .slide img,.slide video{position:absolute;left:0;top:0;width:100%;height:100%;-webkit-user-drag:none;object-fit:fill}
   .canvas{position:absolute;left:0;top:0;width:100%;will-change:transform;backface-visibility:hidden}
   .slide img.nav{height:11.111%}
+  .slide > video{z-index:1}
+  .slide img.nav{z-index:2}
   .slide img.nav.solid{height:13.333%;object-fit:contain;object-position:top}
   .slide video.feather{-webkit-mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(to right,transparent,#000 9%,#000 91%,transparent)}
   /* 세로 화면: 가로 장의 영역(창)을 잘라 다시 배치. 창 가장자리는 배경으로 흐림 */
@@ -46,15 +48,17 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104172812';
+var V = 'v261104174223';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
 var TABS = [['Background',2],['Research',4],['Process',3],['Design System',4],['Scenario',1],['Interface',15],['Credit',2]];
 // 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. Interface 메뉴 아래 작은 글씨(x 1536~1664, y 86~135) 터치 영역
-var SUBS = { 5: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1536, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
-var W = 1920, H = 1080, NAV_H = 120, TAB_X = 720, TAB_W = 160, EDGE = 0.12;
+var SUBS = { 5: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1627, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
+var W = 1920, H = 1080, NAV_H = 120, EDGE = 0.12;
+// 탭 글자 위치(x 시작, 끝). 피그마 메뉴(글자 간격 56px 로 고르게, 18px)와 같음. 터치는 글자 사이 간격의 가운데까지
+var TAB_R = [[911,1015],[1071,1152],[1208,1278],[1334,1464],[1520,1596],[1652,1730],[1786,1840]];
 // 스크롤 장: 피그마 '(스크롤)' 프레임. slides/키.png = 세로로 긴 Content, 키-nav.png = 고정 메뉴(투명).
 // delay 뒤 end(px)만큼 위로 스크롤하고, 끝나면 after 영상 재생. 세로 화면에서는 한 번에 다 보이므로 delay 뒤 영상만 재생
 var SCROLL = {
@@ -63,7 +67,12 @@ var SCROLL = {
   '03-03': { h: 2110, end: 1030, delay: 4000 },
   '04-03': { h: 1869, end: 789, delay: 4000 }
 };
-var SCROLL_MS = 1800, SCROLL_EASE = 'cubic-bezier(.4,0,.2,1)';
+var SCROLL_MS = 1800, SCROLL_EASE = 'cubic-bezier(.37,0,.63,1)';  // 사인 곡선(카메라 영상과 같은 움직임)
+// 카메라 영상(가로): 스크롤 장 전체 흐름(위 정렬로 나타남 → 4초 뒤 1.8초 동안 내려감 → 아래 영상)을 미리 렌더링한 한 편(tools/camera.sh).
+// 손으로 끌거나 휠을 돌리면 그때부터 긴 이미지로 바꿔 직접 움직임. loop = 이 초부터 끝까지 반복(null 이면 끝 장면에서 멈춤)
+var CAM = { '02-01': { loop: 5.8 }, '02-04': { loop: null } };
+function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (1 - Math.cos(Math.PI * p)) / 2; }
+var IDLE_MS = 60000;  // 1분 동안 조작이 없으면 첫 장(Background)으로
 // 영상이 메뉴 영역까지 덮는 장: 메뉴(slides/키-nav.png, 투명)를 영상 위에 한 번 더 올림
 var NAV_ON_TOP = ['04-01'];
 // 세로 화면(스탠바이미 2 세로): 1440x2560 기준. tools/portrait.py 가 만든 media/portrait.js 의 창 배치를 씀
@@ -83,7 +92,7 @@ function buildCanvas(key, ch, withVideo, vids) {
   if (withVideo) OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
     if (ov.slide !== key) return;
     var v = document.createElement('video');
-    v.src = ov.src + '?' + V; v.muted = v.playsInline = true; v.loop = ov.loop !== false; v.preload = 'auto'; v.after = ov.after;
+    v.dataset.src = ov.src + '?' + V; v.muted = v.playsInline = true; v.loop = ov.loop !== false; v.preload = 'none'; v.after = ov.after;
     v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
     v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
     v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
@@ -115,6 +124,11 @@ TABS.forEach(function (t, ti) {
     el.className = 'slide'; el.videos = []; el.scroll = sc; el.key = key;
     if (!PORT) {
       var c = buildCanvas(key, ch, true, el.videos); el.canvas = c.cv; el.appendChild(c.cv); sampleBg(c.img, el);
+      if (CAM[key]) {  // 카메라 영상은 캔버스 위, 메뉴 아래
+        var cam = document.createElement('video'); cam.dataset.src = 'media/' + key + '-cam.mp4?' + V; cam.muted = cam.playsInline = true; cam.preload = 'none';
+        cam.setAttribute('muted', ''); cam.setAttribute('playsinline', ''); cam.loopFrom = CAM[key].loop; el.cam = cam; el.appendChild(cam);
+        cam.addEventListener('ended', function () { if (this.loopFrom != null && this.parentNode.classList.contains('on')) { this.currentTime = this.loopFrom; this.play(); } });
+      }
       if (navOnTop) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png?' + V; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
     } else {
       var P = PORTRAIT[key], first = null;
@@ -131,7 +145,24 @@ TABS.forEach(function (t, ti) {
   }
 });
 function pad(n) { return (n < 10 ? '0' : '') + n; }
-function play(v) { v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+function play(v) { attach(v); if (v.currentTime) v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+// 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
+// 영상이 준비되기 전에는 그 아래 PNG 에 영상 첫 프레임이 그대로 들어 있어(tools/bake.py) 바뀌는 티가 나지 않음
+function attach(v) { if (!v.getAttribute('src')) { v.src = v.dataset.src; v.preload = 'auto'; } }
+function detach(v) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } }
+function allVideos(s) { return s.cam ? s.videos.concat([s.cam]) : s.videos; }
+function warm(n) {
+  slides.forEach(function (s, i) {
+    var d = Math.min(Math.abs(i - n), slides.length - Math.abs(i - n));
+    allVideos(s).forEach(d <= 1 ? attach : function (v) { if (s !== slides[cur] && !s.classList.contains('prev')) detach(v); });
+  });
+}
+function manual(el) {  // 카메라 영상 → 긴 이미지 직접 조작으로 전환
+  if (!el.cam || el.manual) return; el.manual = true;
+  var t = el.cam.currentTime; el.cam.pause(); el.cam.style.visibility = 'hidden';
+  setOff(el, camOff(el.scroll, t));
+  el.videos.forEach(function (v) { if (!v.after || t * 1000 >= el.scroll.delay + SCROLL_MS) play(v); else el.afterStarted = false; });
+}
 
 var cur = 0, timers = [];
 // 스크롤 장(가로): off = 위로 올라간 거리(px, 1920x1080 기준). 자동 스크롤 + 손으로 위아래 드래그
@@ -157,10 +188,13 @@ function go(n) {
       old.classList.remove('prev');
       old.videos.forEach(function (v) { v.pause(); v.currentTime = 0; });
       if (old.scroll && !PORT) setOff(old, 0);
+      if (old.cam) { old.cam.pause(); old.cam.style.visibility = ''; old.manual = false; }
     }, 400);
   }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg;
-  el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); v.currentTime = 0; } });
+  warm(n);
+  if (el.cam && !PORT) { el.manual = false; el.cam.style.visibility = ''; el.off = 0; setOff(el, 0); play(el.cam); return; }
+  el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); if (v.currentTime) v.currentTime = 0; } });
   var sc = el.scroll;
   if (sc) {
     el.afterStarted = false;
@@ -174,8 +208,12 @@ window.addEventListener('resize', function () { if (!FORCE && (window.innerHeigh
 
 // 터치: 좌우 스와이프로 앞뒤, 스크롤 장은 위아래 드래그, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
 var sx = null, sy = 0, dragging = false, startOff = 0;
+var idleT = null;
+function poke() { clearTimeout(idleT); idleT = setTimeout(function () { if (cur !== 0) go(0); poke(); }, IDLE_MS); }
+poke();
+['pointerdown', 'keydown', 'wheel'].forEach(function (ev) { document.addEventListener(ev, poke, { passive: true }); });
 document.addEventListener('pointerdown', function (e) {
-  sx = e.clientX; sy = e.clientY; dragging = false; startOff = slides[cur].off || 0; lockFs();
+  var c0 = slides[cur]; sx = e.clientX; sy = e.clientY; dragging = false; startOff = c0.cam && !c0.manual && !PORT ? camOff(c0.scroll, c0.cam.currentTime) : (c0.off || 0); lockFs();
 });
 document.addEventListener('pointermove', function (e) {
   var el = slides[cur];
@@ -183,12 +221,13 @@ document.addEventListener('pointermove', function (e) {
   var dx = e.clientX - sx, dy = e.clientY - sy;
   if (!dragging && Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
     dragging = true; timers.forEach(clearTimeout); timers = [];  // 직접 움직이면 자동 스크롤 취소
+    manual(el);
   }
   if (dragging) setOff(el, startOff - dy * H / stage.getBoundingClientRect().height);
 });
 document.addEventListener('wheel', function (e) {
   var el = slides[cur]; if (!el.scroll || PORT) return;
-  timers.forEach(clearTimeout); timers = []; setOff(el, (el.off || 0) + e.deltaY);
+  timers.forEach(clearTimeout); timers = []; manual(el); setOff(el, (el.off || 0) + e.deltaY);
 }, { passive: true });
 document.addEventListener('pointerup', function (e) {
   if (sx === null) return;
@@ -204,8 +243,7 @@ document.addEventListener('pointerup', function (e) {
   if (sub && my > SUB_Y0 && my < SUB_Y1 && j >= 0 && j < sub.length) return go(tabStart[tabOf[cur]] + sub[j][1]);
   if (my < NAV_H) {
     if (mx < 160) return go(0);
-    var k = Math.floor((mx - TAB_X) / TAB_W);
-    if (k >= 0 && k < TABS.length) return go(tabStart[k]);
+    for (var k = 0; k < TAB_R.length; k++) if (mx >= TAB_R[k][0] - 28 && mx < TAB_R[k][1] + 28) return go(tabStart[k]);
     return;
   }
   if (x < EDGE) go(cur - 1); else if (x > 1 - EDGE) go(cur + 1);
