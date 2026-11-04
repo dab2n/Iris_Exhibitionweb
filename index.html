@@ -47,16 +47,32 @@
   #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
+  /* Process 온톨로지 장: 하단 고정 '온톨로지 보러가기' → 시각화 앱을 전시 화면 위에 띄움(전체화면 유지), 오른쪽 위 '돌아가기' */
+  .pill{position:absolute;z-index:8;border:0;border-radius:999px;display:flex;align-items:center;gap:.5em;white-space:nowrap;
+    font:500 clamp(13px,0.94vw,18px)/1 "SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;letter-spacing:-.01em;
+    transition:opacity .35s ease,transform .2s ease}
+  .pill:active{transform:scale(.96)}
+  #ontoGo{left:50%;bottom:4.4%;transform:translateX(-50%);padding:1.1em 1.8em;background:#111;color:#fff;
+    box-shadow:0 6px 24px rgba(0,0,0,.18),0 1px 3px rgba(0,0,0,.12);opacity:0;pointer-events:none}
+  #ontoGo:active{transform:translateX(-50%) scale(.96)}
+  body.onto-slide #ontoGo{opacity:1;pointer-events:auto}
+  #onto{position:fixed;inset:0;z-index:20;background:#e9f3fb;opacity:0;visibility:hidden;transition:opacity .35s ease,visibility 0s .35s}
+  #onto.on{opacity:1;visibility:visible;transition:opacity .35s ease}
+  #onto iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  #ontoBack{top:20px;right:24px;padding:.85em 1.3em;background:rgba(255,255,255,.96);color:#111;
+    box-shadow:0 0 0 1px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
 <div id="stage">
   <div class="arrow" id="prev"></div><div class="arrow" id="next"></div>
+  <button class="pill" id="ontoGo">온톨로지 보러가기 <span aria-hidden="true">→</span></button>
 </div>
+<div id="onto"><button class="pill" id="ontoBack"><span aria-hidden="true">←</span> 전시 화면으로 돌아가기</button></div>
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104192759';
+var V = 'v261104201807';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -190,9 +206,10 @@ function startAfter(el, ms) {
   if (el.afterStarted) return; el.afterStarted = true;
   setTimeout(function () { if (el.classList.contains('on')) el.videos.forEach(function (v) { if (v.after) play(v); }); }, ms || 0);
 }
-function setOff(el, off, ms) {
+function setOff(el, off, ms, free) {
   // 한 번 내려간 곳보다 위로는 다시 올라가지 않음(자동 스크롤 목표를 정하면 그 끝까지가 기준)
-  var sc = el.scroll; off = Math.max(el.maxOff || 0, Math.min(sc.h - H, off)); el.off = off; el.maxOff = Math.max(el.maxOff || 0, off);
+  // 관람자가 직접 끌거나 휠을 돌리면(free) 위로도 자유롭게 — 그 자리가 새 기준
+  var sc = el.scroll; off = Math.max(free ? 0 : el.maxOff || 0, Math.min(sc.h - H, off)); el.off = off; el.maxOff = free ? off : Math.max(el.maxOff || 0, off);
   if (off >= sc.h - H - 1 && el === slides[cur]) setTimeout(function () { if (el === slides[cur]) unlockNext(); }, ms || 0);
   el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + SCROLL_EASE : 'none';
   el.canvas.style.transform = 'translate3d(0,' + (-off / sc.h * 100) + '%,0)';
@@ -226,7 +243,7 @@ function go(n) {
       if (old.cam) { old.cam.pause(); old.cam.style.visibility = ''; old.manual = false; if (old.navEl) old.navEl.style.visibility = 'hidden'; }
     }, 400);
   }
-  cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; arrowTheme(el);
+  cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
   warm(n);
   el.maxOff = 0; nextBtn.classList.remove('ready');
   if (el.scroll) lockNext(); else { nextLocked = false; nextBtn.classList.remove('off'); }
@@ -251,7 +268,26 @@ window.addEventListener('resize', function () { if (!FORCE && (window.innerHeigh
 // 터치: 좌우 스와이프로 앞뒤, 스크롤 장은 위아래 드래그, 탭 영역(상단 메뉴/로고/좌우 끝)으로 이동
 var sx = null, sy = 0, dragging = false, startOff = 0;
 var idleT = null;
-function poke() { clearTimeout(idleT); idleT = setTimeout(function () { if (cur !== 0) go(0); poke(); checkUpdate(); }, IDLE_MS); }
+// 온톨로지 시각화 앱(같은 dab2n.github.io 라 안쪽 터치도 무조작 타이머에 반영)
+var ONTO_SLIDE = '03-03', ONTO_URL = 'https://dab2n.github.io/iris-ontology/', onto = document.getElementById('onto'), ontoF = null;
+function openOnto() {
+  if (!ontoF) { ontoF = document.createElement('iframe'); ontoF.src = ONTO_URL; ontoF.allow = 'fullscreen';
+    ontoF.addEventListener('load', function () { try { ['pointerdown', 'keydown', 'wheel'].forEach(function (ev) { ontoF.contentWindow.addEventListener(ev, poke, { passive: true }); }); } catch (e) {} });
+    onto.insertBefore(ontoF, onto.firstChild); }
+  timers.forEach(clearTimeout); timers = []; slides[cur].videos.concat(slides[cur].cam || []).forEach(function (v) { v.pause(); });
+  onto.classList.add('on'); poke();
+}
+function closeOnto() {  // 앱은 처음 상태로(다음 관람자용) — 다음에 열 때 새로 불러옴
+  if (!onto.classList.contains('on')) return; onto.classList.remove('on');
+  setTimeout(function () { if (!onto.classList.contains('on') && ontoF) { ontoF.remove(); ontoF = null; } }, 400);
+  slides[cur].videos.forEach(function (v) { if (!v.after || slides[cur].afterStarted) v.play().catch(function () {}); });
+}
+[['ontoGo', openOnto], ['ontoBack', closeOnto]].forEach(function (b) {
+  var el = document.getElementById(b[0]);
+  el.addEventListener('pointerdown', function (e) { e.stopPropagation(); lockFs(); poke(); });
+  el.addEventListener('pointerup', function (e) { e.stopPropagation(); b[1](); });
+});
+function poke() { clearTimeout(idleT); idleT = setTimeout(function () { closeOnto(); if (cur !== 0) go(0); poke(); checkUpdate(); }, IDLE_MS); }
 function checkUpdate() {
   fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (t) {
     var m = t.match(/var V = '([^']+)'/); if (m && m[1] !== V && cur === 0) location.reload();
@@ -270,11 +306,11 @@ document.addEventListener('pointermove', function (e) {
     dragging = true; timers.forEach(clearTimeout); timers = [];  // 직접 움직이면 자동 스크롤 취소
     manual(el);
   }
-  if (dragging) setOff(el, startOff - dy * H / stage.getBoundingClientRect().height);
+  if (dragging) setOff(el, startOff - dy * H / stage.getBoundingClientRect().height, 0, true);
 });
 document.addEventListener('wheel', function (e) {
   var el = slides[cur]; if (!el.scroll || PORT) return;
-  timers.forEach(clearTimeout); timers = []; manual(el); setOff(el, (el.off || 0) + e.deltaY);
+  timers.forEach(clearTimeout); timers = []; manual(el); setOff(el, (el.off || 0) + e.deltaY, 0, true);
 }, { passive: true });
 document.addEventListener('pointerup', function (e) {
   if (sx === null) return;
@@ -318,6 +354,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') { userExited = true; if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
   else if (e.key === 'f' || e.key === 'F') { userExited = false; enterFs(); }
   else if (e.key === 'p' || e.key === 'P') { try { if (FORCE) sessionStorage.removeItem('iris-port'); else sessionStorage.setItem('iris-port', PORT ? '0' : '1'); } catch (x) {} location.reload(); }
+  else if (onto.classList.contains('on')) return;  // 온톨로지 앱이 떠 있는 동안 뒤 장은 넘기지 않음
   else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') goNext();
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
 });
