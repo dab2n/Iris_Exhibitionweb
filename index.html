@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105054339';
+var V = 'v261105082733';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -228,19 +228,29 @@ var prevBtn = document.getElementById('prev'), lastTheme = '';
 })();
 function arrowTheme(el) { lastTheme = ''; var d = el.dark || []; document.getElementById('prev').classList.toggle('dark', !!d[0]); nextBtn.classList.toggle('dark', !!d[1]); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
+// 영상은 첫 장면이 실제로 화면에 그려진 뒤에만 보이게 함. TV 는 영상이 준비되기 전 그 자리를 검게 칠해서
+// (화면 전체 영상이면 화면 전체가 검게 깜빡임) — 그동안은 아래 PNG(영상 첫 장면이 들어 있음)가 보여 바뀌는 티가 없음
+function hideUntilFrame(v) {
+  var tok = (v.hideTok || 0) + 1; v.hideTok = tok;
+  v.style.transition = 'none'; v.style.opacity = 0; void v.offsetWidth;
+  var show = function () { if (v.hideTok !== tok) return; v.style.transition = v.classList.contains('feather') ? '' : 'none'; v.style.opacity = ''; };
+  if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(function () { requestAnimationFrame(show); });
+  else { var h = function () { if (v.currentTime > 0.04) { v.removeEventListener('timeupdate', h); show(); } }; v.addEventListener('timeupdate', h); }
+}
 function play(v) {
-  attach(v);
-  if (v.classList.contains('feather') && v.currentTime) {  // 다시 들어올 때 지난 마지막 장면이 비치지 않게 숨겼다가 처음 장면부터 서서히
-    v.style.transition = 'none'; v.style.opacity = 0; void v.offsetWidth; v.style.transition = '';
-    v.addEventListener('playing', function () { v.style.opacity = ''; }, { once: true });
-  }
+  attach(v); hideUntilFrame(v);
   if (v.currentTime) v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {});
 }
 // 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
 // 영상이 준비되기 전에는 그 아래 PNG 에 영상 첫 프레임이 그대로 들어 있어(tools/bake.py) 바뀌는 티가 나지 않음
 function attach(v) {
   if (v.getAttribute('src')) return; v.src = v.dataset.src; v.preload = 'auto';
-  if (v.classList.contains('feather')) { v.style.opacity = 0; v.addEventListener('playing', function () { v.style.opacity = ''; }, { once: true }); }
+}
+// 장 그림을 넘기기 전에 미리 디코딩(디코딩 전 한 프레임 비어 보이는 깜빡임 방지). 이웃 장은 미리, 멀리 가는 탭 이동은 잠깐 기다렸다가
+function imgsOf(s) { return Array.prototype.slice.call(s.querySelectorAll('img')); }
+function decodeSlide(s) {
+  if (s.decoded) return Promise.resolve(); s.decoded = true;
+  return Promise.all(imgsOf(s).map(function (i) { return i.decode ? i.decode().catch(function () {}) : Promise.resolve(); }));
 }
 function detach(v) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } }
 function allVideos(s) { return s.cam ? s.videos.concat([s.cam]) : s.videos; }
@@ -248,6 +258,7 @@ function warm(n) {
   slides.forEach(function (s, i) {
     var d = Math.min(Math.abs(i - n), slides.length - Math.abs(i - n));
     allVideos(s).forEach(d <= 1 ? attach : function (v) { if (s !== slides[cur] && !s.classList.contains('prev')) detach(v); });
+    if (d <= 1) decodeSlide(s);
   });
 }
 function manual(el) {  // 카메라 영상 → 긴 이미지 직접 조작으로 전환
@@ -285,8 +296,13 @@ function goNext() {
   else if (el.cam && !el.manual) { if (el.cam.currentTime * 1000 < sc.delay) seekCam(el.cam, sc.delay / 1000); }
   else setOff(el, sc.end, sc.ms || SCROLL_MS);
 }
+var goTok = 0;
 function go(n) {
-  n = (n + slides.length) % slides.length;
+  n = (n + slides.length) % slides.length; var tok = ++goTok, target = slides[n];
+  if (target.decoded || target === slides[cur]) return goNow(n);
+  Promise.race([decodeSlide(target), new Promise(function (r) { setTimeout(r, 300); })]).then(function () { if (tok === goTok) goNow(n); });
+}
+function goNow(n) {
   timers.forEach(clearTimeout); timers = [];
   var old = slides[cur];
   slides.forEach(function (s) { if (s !== old) s.classList.remove('prev'); });
