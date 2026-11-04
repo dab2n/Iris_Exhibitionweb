@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105083641';
+var V = 'v261105084413';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -308,6 +308,16 @@ function go(n) {
   if (target.decoded || target === slides[cur]) return goNow(n);
   Promise.race([decodeSlide(target), new Promise(function (r) { setTimeout(r, 300); })]).then(function () { if (tok === goTok) goNow(n); });
 }
+// 재생 감시: 들어온 뒤 0.7초·1.6초에 재생돼야 할 영상이 멈춰 있으면 다시 재생(기기에서 재생 요청이 묻히는 경우 대비)
+function watchPlay(el) {
+  [700, 1600].forEach(function (ms) { timers.push(setTimeout(function () {
+    if (el !== slides[cur] || onto.classList.contains('on')) return;
+    allVideos(el).forEach(function (v) {
+      var want = v === el.cam ? !el.manual : (!v.after || el.afterStarted) && (!el.cam || el.manual);
+      if (want && v.paused && !v.ended && v.getAttribute('src')) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+    });
+  }, ms)); });
+}
 function goNow(n) {
   timers.forEach(clearTimeout); timers = [];
   var old = slides[cur];
@@ -324,6 +334,7 @@ function goNow(n) {
   }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; if (GROW[el.key] && !PORT) { el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow'); }
   prevBtn.classList.toggle('end', n === 0); nextBtn.classList.toggle('end', n === slides.length - 1);
+  watchPlay(el);
   arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
   warm(n);
   el.maxOff = 0; nextBtn.classList.remove('ready');
