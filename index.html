@@ -37,6 +37,10 @@
     border:solid rgba(255,255,255,.9);border-width:0 2px 2px 0}
   #prev{left:3.6%} #prev::after{transform:translateX(15%) rotate(135deg)}
   #next{right:3.6%} #next::after{transform:translateX(-15%) rotate(-45deg)}
+  /* 스크롤 장: 맨 아래까지 내려가기 전엔 다음 버튼을 흐리게(막힘), 내려가면 다시 켜지며 한 번 살짝 커짐 */
+  .arrow{transition:opacity .4s ease} #next.off{opacity:.22}
+  #next.ready{animation:ready .9s ease 2}
+  @keyframes ready{50%{transform:scale(1.18);background:rgba(127,127,127,.32)}}
   #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
@@ -49,7 +53,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104175628';
+var V = 'v261104181638';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -129,6 +133,8 @@ TABS.forEach(function (t, ti) {
       if (CAM[key]) {  // 카메라 영상은 캔버스 위, 메뉴 아래
         var cam = document.createElement('video'); cam.dataset.src = 'media/' + key + '-cam.mp4?' + V; cam.muted = cam.playsInline = true; cam.preload = 'none';
         cam.setAttribute('muted', ''); cam.setAttribute('playsinline', ''); cam.loopFrom = CAM[key].loop; el.cam = cam; el.appendChild(cam);
+        cam.addEventListener('timeupdate', function () {  // 카메라가 맨 아래에 닿으면 다음 버튼 켬
+          var s = this.parentNode; if (s === slides[cur] && !s.manual && this.currentTime * 1000 >= s.scroll.delay + SCROLL_MS - 60) unlockNext(); });
         cam.addEventListener('ended', function () { if (this.loopFrom != null && this.parentNode.classList.contains('on')) { this.currentTime = this.loopFrom; this.play(); } });
       }
       if (navOnTop) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png?' + V; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
@@ -175,9 +181,23 @@ function startAfter(el, ms) {
 function setOff(el, off, ms) {
   // 한 번 내려간 곳보다 위로는 다시 올라가지 않음(자동 스크롤 목표를 정하면 그 끝까지가 기준)
   var sc = el.scroll; off = Math.max(el.maxOff || 0, Math.min(sc.h - H, off)); el.off = off; el.maxOff = Math.max(el.maxOff || 0, off);
+  if (off >= sc.h - H - 1 && el === slides[cur]) setTimeout(function () { if (el === slides[cur]) unlockNext(); }, ms || 0);
   el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + SCROLL_EASE : 'none';
   el.canvas.style.transform = 'translate3d(0,' + (-off / sc.h * 100) + '%,0)';
   if (off >= sc.end * 0.5) startAfter(el, ms);  // 아래 내용이 보이면 그 영상 재생
+}
+// 다음 장 잠금: 스크롤 장은 맨 아래까지 내려간 뒤에야 다음으로 넘어감(처음 본 사람이 아래 내용을 모르고 넘기지 않게)
+var nextLocked = false, nextBtn = document.getElementById('next');
+function lockNext() { nextLocked = true; nextBtn.classList.remove('ready'); nextBtn.classList.add('off'); }
+function unlockNext() { if (!nextLocked) return; nextLocked = false; nextBtn.classList.remove('off'); void nextBtn.offsetWidth; nextBtn.classList.add('ready'); }
+function seekCam(v, t) { if (v.readyState >= 1) v.currentTime = t; else v.addEventListener('loadedmetadata', function () { v.currentTime = t; }, { once: true }); }
+function goNext() {
+  if (!nextLocked) return go(cur + 1);
+  var el = slides[cur], sc = el.scroll;  // 막혀 있을 때 다음을 누르면 기다리지 않고 바로 내려감
+  timers.forEach(clearTimeout); timers = [];
+  if (PORT) { startAfter(el, 0); unlockNext(); }
+  else if (el.cam && !el.manual) { if (el.cam.currentTime * 1000 < sc.delay) seekCam(el.cam, sc.delay / 1000); }
+  else setOff(el, sc.end, sc.ms || SCROLL_MS);
 }
 function go(n) {
   n = (n + slides.length) % slides.length;
@@ -196,13 +216,14 @@ function go(n) {
   }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg;
   warm(n);
-  el.maxOff = 0;
+  el.maxOff = 0; nextBtn.classList.remove('ready');
+  if (el.scroll) lockNext(); else { nextLocked = false; nextBtn.classList.remove('off'); }
   if (el.cam && !PORT) { el.manual = false; el.cam.style.visibility = ''; if (el.navEl) el.navEl.style.visibility = 'hidden'; el.off = 0; setOff(el, 0); play(el.cam); return; }
   el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); if (v.currentTime) v.currentTime = 0; } });
   var sc = el.scroll;
   if (sc) {
     el.afterStarted = false;
-    if (PORT) timers.push(setTimeout(function () { startAfter(el, 0); }, sc.delay));
+    if (PORT) timers.push(setTimeout(function () { startAfter(el, 0); unlockNext(); }, sc.delay));
     else { setOff(el, 0); timers.push(setTimeout(function () { setOff(el, sc.end, sc.ms || SCROLL_MS); }, sc.delay)); }
   }
 }
@@ -237,7 +258,7 @@ document.addEventListener('pointerup', function (e) {
   if (sx === null) return;
   var dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
   if (dragging) { dragging = false; return; }
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return go(cur + (dx < 0 ? 1 : -1));
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return dx < 0 ? goNext() : go(cur - 1);
   var r = stage.getBoundingClientRect();
   var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
@@ -250,7 +271,7 @@ document.addEventListener('pointerup', function (e) {
     for (var k = 0; k < TAB_R.length; k++) if (mx >= TAB_R[k][0] - 28 && mx < TAB_R[k][1] + 28) return go(tabStart[k]);
     return;
   }
-  if (x < EDGE) go(cur - 1); else if (x > 1 - EDGE) go(cur + 1);
+  if (x < EDGE) go(cur - 1); else if (x > 1 - EDGE) goNext();
 });
 ['contextmenu', 'dragstart', 'selectstart', 'gesturestart'].forEach(function (ev) {
   document.addEventListener(ev, function (e) { e.preventDefault(); });
@@ -275,7 +296,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') { userExited = true; if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
   else if (e.key === 'f' || e.key === 'F') { userExited = false; enterFs(); }
   else if (e.key === 'p' || e.key === 'P') { try { if (FORCE) sessionStorage.removeItem('iris-port'); else sessionStorage.setItem('iris-port', PORT ? '0' : '1'); } catch (x) {} location.reload(); }
-  else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') go(cur + 1);
+  else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') goNext();
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
 });
 document.addEventListener('keyup', function (e) { if (e.key === 'Escape' && !isFs()) userExited = true; });
