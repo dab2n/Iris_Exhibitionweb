@@ -48,7 +48,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104174543';
+var V = 'v261104175036';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -65,7 +65,8 @@ var SCROLL = {
   '02-01': { h: 1714, end: 634, delay: 4000 },
   '02-04': { h: 1953, end: 850, delay: 4000 },
   '03-03': { h: 2110, end: 1030, delay: 4000 },
-  '04-03': { h: 1869, end: 789, delay: 4000 }
+  '04-03': { h: 1869, end: 789, delay: 4000 },
+  '07-02': { h: 1236, end: 156, delay: 3000, ms: 6000 }  // 크레딧: 천천히
 };
 var SCROLL_MS = 1800, SCROLL_EASE = 'cubic-bezier(.37,0,.63,1)';  // 사인 곡선(카메라 영상과 같은 움직임)
 // 카메라 영상(가로): 스크롤 장 전체 흐름(위 정렬로 나타남 → 4초 뒤 1.8초 동안 내려감 → 아래 영상)을 미리 렌더링한 한 편(tools/camera.sh).
@@ -199,7 +200,7 @@ function go(n) {
   if (sc) {
     el.afterStarted = false;
     if (PORT) timers.push(setTimeout(function () { startAfter(el, 0); }, sc.delay));
-    else { setOff(el, 0); timers.push(setTimeout(function () { setOff(el, sc.end, SCROLL_MS); }, sc.delay)); }
+    else { setOff(el, 0); timers.push(setTimeout(function () { setOff(el, sc.end, sc.ms || SCROLL_MS); }, sc.delay)); }
   }
 }
 go(0);
