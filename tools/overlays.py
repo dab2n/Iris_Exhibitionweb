@@ -39,6 +39,19 @@ for sl, f, fy, r in [('05-03','프레임1_일반요약-플로우맵-오른쪽스
     x, y, s = fit(r[2], r[3], 840)
     O.append((sl, DL+f, None, None, (x + 302*s, y + (fy - r[1])*s, s, 1395*s, 902*s)))
 
+# Interface 레이아웃 통일(2026-11-04): 장별로 화면/이미지 영역 V0(옛 슬라이드 좌표)를 배율 k 로 키워 V1 에 둔다.
+# 영상은 V0 안쪽만 잘라 옮긴다(제목은 PNG 에서 따로 맞춤). 피그마 '여기' 프레임과 같은 값
+XF = {'05-01': ((848,320,984,613), .915, (880,319.5)),   '05-02': ((448,400,1024,640), .9375, (480,400)),
+      '05-03': ((479,385,960,627), 1, (480,400)),        '05-04': ((494,395,930,602), 960/930, (480,400)),
+      '05-05': ((574,394,771,503), 960/771, (480,400)),  '05-07': ((544,432,832,553), 960/832, (480,400)),
+      '05-08': ((431,297,1060,608), 1.1, (377,143.3)),   '05-11': ((885,150,941,910), .879, (916.5,200)),
+      '05-12': ((106,137,1707,925), .865, (222,200))}
+def remap(b, V0, k, V1):
+    bx, by, bw, bh = b['box']; cx, cy, cw, ch = b['crop']; sx, sy = cw / bw, ch / bh
+    x0, y0 = max(bx, V0[0]), max(by, V0[1]); x1, y1 = min(bx + bw, V0[0] + V0[2]), min(by + bh, V0[1] + V0[3])
+    return dict(crop=(cx + (x0 - bx) * sx, cy + (y0 - by) * sy, (x1 - x0) * sx, (y1 - y0) * sy),
+                box=(V1[0] + (x0 - V0[0]) * k, V1[1] + (y0 - V0[1]) * k, (x1 - x0) * k, (y1 - y0) * k))
+
 def boxes(o):
     sl, gif, B, r, p = o
     if B is None: return dict(box=p[:2]+p[3:], crop=(302, 404, 1395, 902))
@@ -52,6 +65,7 @@ if __name__ == '__main__':
     out = []
     for o in O:
         sl, gif = o[0], o[1]; b = boxes(o)
+        if sl in XF: b = remap(b, *XF[sl])
         bx, by, bw, bh = [round(v) for v in b['box']]; bw -= bw % 2; bh -= bh % 2
         if gif.endswith('.mp4'):
             sw = int(subprocess.check_output(['ffprobe','-v','error','-select_streams','v','-show_entries','stream=width','-of','csv=p=0',gif]))
@@ -79,7 +93,8 @@ if __name__ == '__main__':
             fc = f"[1:v]{vf}[g];[0:v][g]overlay={bx}:{by - top}:shortest=1"; ins = ['-loop', '1', '-framerate', '50', '-i', band, '-i', gif]
             bx, by, bw, bh = 0, top, 1920, hh
         fc += ",scale=out_color_matrix=bt709:out_range=tv,format=yuv420p"
-        subprocess.run(['ffmpeg','-y','-loglevel','error'] + ins + ['-filter_complex', fc, '-fps_mode','cfr','-r','50','-c:v','libx264','-crf','16','-preset','slow',
+        if not sl.startswith(os.environ.get('ONLY', '')): pass  # ONLY=05- 처럼 일부만 다시 인코딩
+        else: subprocess.run(['ffmpeg','-y','-loglevel','error'] + ins + ['-filter_complex', fc, '-fps_mode','cfr','-r','50','-c:v','libx264','-crf','16','-preset','slow',
                         '-colorspace','bt709','-color_primaries','bt709','-color_trc','iec61966-2-1','-color_range','tv',
                         '-movflags','+faststart','-an'] + (['-t', str(NOLOOP[sl])] if sl in NOLOOP else []) + [f'{root}/{name}'], check=True)
         out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, feather=sl in FEATHER, fade=FADE.get(sl, ''), src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
