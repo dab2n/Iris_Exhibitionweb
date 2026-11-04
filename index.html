@@ -46,12 +46,12 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104172006';
+var V = 'v261104172812';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
-var TABS = [['Background',2],['Research',4],['Process',3],['Design System',4],['Scenario',1],['Interface',15],['Credit',1]];
+var TABS = [['Background',2],['Research',4],['Process',3],['Design System',4],['Scenario',1],['Interface',15],['Credit',2]];
 // 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. Interface 메뉴 아래 작은 글씨(x 1536~1664, y 86~135) 터치 영역
 var SUBS = { 5: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1536, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
 var W = 1920, H = 1080, NAV_H = 120, TAB_X = 720, TAB_W = 160, EDGE = 0.12;
