@@ -72,7 +72,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104201807';
+var V = 'v261104215612';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -142,6 +142,12 @@ function sampleBg(img, el) {  // 화면 밖(비율이 맞지 않을 때 남는 �
       var iw = img.naturalWidth, ih = Math.min(img.naturalHeight, iw * 9 / 16);
       el.dark = [0.036, 0.93].map(function (fx) { var L = 0; c.clearRect(0, 0, 40, 40); c.drawImage(img, iw * fx, ih * 0.47, iw * 0.034, ih * 0.06, 0, 0, 20, 20);
         var q = c.getImageData(0, 0, 20, 20).data; for (var i = 0; i < q.length; i += 4) L += 0.2126 * q[i] + 0.7152 * q[i + 1] + 0.0722 * q[i + 2]; return L / 400 < 140; });
+      if (el.scroll && !PORT) {  // 스크롤 장: 긴 이미지 세로 10px 마다 버튼 자리 밝기 표 → 내려가는 동안 버튼 색이 따라 바뀜
+        var n = Math.ceil(img.naturalHeight / 10), cv = document.createElement('canvas'); cv.width = 2; cv.height = n; var g = cv.getContext('2d');
+        g.drawImage(img, iw * 0.036, 0, iw * 0.034, img.naturalHeight, 0, 0, 1, n); g.drawImage(img, iw * 0.93, 0, iw * 0.034, img.naturalHeight, 1, 0, 1, n);
+        var q2 = g.getImageData(0, 0, 2, n).data; el.lum = [];
+        for (var r = 0; r < n * 2; r++) el.lum.push(0.2126 * q2[r * 4] + 0.7152 * q2[r * 4 + 1] + 0.0722 * q2[r * 4 + 2] < 140);
+      }
       if (el.classList.contains('on')) arrowTheme(el);
       if (el.scroll && el.navEl && !PORT) el.navEl.style.background = 'linear-gradient(' + el.bg + ' 83.3%, transparent)'; } catch (e) {}
   });
@@ -179,7 +185,18 @@ TABS.forEach(function (t, ti) {
     slides.push(el); tabOf.push(ti);
   }
 });
-function arrowTheme(el) { var d = el.dark || []; document.getElementById('prev').classList.toggle('dark', !!d[0]); nextBtn.classList.toggle('dark', !!d[1]); }
+// 스크롤 장은 지금 보이는 위치(카메라 영상 시간 또는 긴 이미지의 실제 위치)로 버튼 색을 매 프레임 맞춤
+var prevBtn = document.getElementById('prev'), lastTheme = '';
+(function tick() {
+  var el = slides[cur];
+  if (el && el.lum) {
+    var off = el.cam && !el.manual ? camOff(el.scroll, el.cam.currentTime) : -(el.canvas.getBoundingClientRect().top - stage.getBoundingClientRect().top) * W / stage.getBoundingClientRect().width;
+    var row = Math.max(0, Math.min(el.lum.length / 2 - 1, Math.round((off + H * 0.5) / 10))), k = el.lum[row * 2] + ',' + el.lum[row * 2 + 1];
+    if (k !== lastTheme) { lastTheme = k; prevBtn.classList.toggle('dark', el.lum[row * 2]); nextBtn.classList.toggle('dark', el.lum[row * 2 + 1]); }
+  } else lastTheme = '';
+  requestAnimationFrame(tick);
+})();
+function arrowTheme(el) { lastTheme = ''; var d = el.dark || []; document.getElementById('prev').classList.toggle('dark', !!d[0]); nextBtn.classList.toggle('dark', !!d[1]); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function play(v) { attach(v); if (v.currentTime) v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function () {}); }
 // 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
