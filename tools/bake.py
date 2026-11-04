@@ -17,6 +17,6 @@ for o in O:
     x, y = round(o['box'][0] * 1920), round(o['box'][1] * ch); w, h = round(o['box'][2] * 1920), round(o['box'][3] * ch)
     if fr.size != (w, h): fr = fr.resize((w, h))
     # 합성 영상 전체가 아니라 GIF 가 움직이는 영역만 붙임 — 영상에 담긴 옛 배치(글자 위치 등)가 PNG 로 번지지 않게
-    gx, gy, gw, gh = o.get('gbox', [x, y, w, h])
+    gx, gy, gw, gh = [x, y, w, h] if (w, h) == (1920, 1080) else o.get('gbox', [x, y, w, h])  # 화면 전체 영상이면 통째로(PNG = 영상 첫 장면)
     im.paste(fr.crop((gx - x, gy - y, gx - x + gw, gy - y + gh)), (gx, gy)); im.save(p)
     print(k, o['src'], (gx, gy, gw, gh))
