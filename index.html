@@ -41,7 +41,7 @@
   #prev{left:3.6%} #prev::after{transform:translateX(15%) rotate(135deg)}
   #next{right:3.6%} #next::after{transform:translateX(-15%) rotate(-45deg)}
   /* 스크롤 장: 맨 아래까지 내려가기 전엔 다음 버튼을 흐리게(막힘), 내려가면 다시 켜지며 한 번 살짝 커짐 */
-  #next.off{opacity:.3}
+  #next.off{opacity:.3} .arrow.end{opacity:0}
   #next.ready{animation:ready .9s ease 2}
   @keyframes ready{50%{transform:scale(1.18)}}
   #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105082733';
+var V = 'v261105082850';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -288,7 +288,9 @@ var nextLocked = false, nextBtn = document.getElementById('next');
 function lockNext() { nextLocked = true; nextBtn.classList.remove('ready'); nextBtn.classList.add('off'); }
 function unlockNext() { if (!nextLocked) return; nextLocked = false; nextBtn.classList.remove('off'); void nextBtn.offsetWidth; nextBtn.classList.add('ready'); }
 function seekCam(v, t) { if (v.readyState >= 1) v.currentTime = t; else v.addEventListener('loadedmetadata', function () { v.currentTime = t; }, { once: true }); }
+function goPrev() { if (cur > 0) go(cur - 1); }  // 첫 장에서 크레딧으로 넘어가지 않음
 function goNext() {
+  if (cur >= slides.length - 1) return;  // 마지막 장(크레딧)에서 처음으로 넘어가지 않음(탭으로는 이동 가능)
   if (!nextLocked) return go(cur + 1);
   var el = slides[cur], sc = el.scroll;  // 막혀 있을 때 다음을 누르면 기다리지 않고 바로 내려감
   timers.forEach(clearTimeout); timers = [];
@@ -317,6 +319,7 @@ function goNow(n) {
     }, 400);
   }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; if (GROW[el.key] && !PORT) { el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow'); }
+  prevBtn.classList.toggle('end', n === 0); nextBtn.classList.toggle('end', n === slides.length - 1);
   arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
   warm(n);
   el.maxOff = 0; nextBtn.classList.remove('ready');
@@ -390,7 +393,7 @@ document.addEventListener('pointerup', function (e) {
   if (sx === null) return;
   var dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
   if (dragging) { dragging = false; return; }
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return dx < 0 ? goNext() : go(cur - 1);
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) return dx < 0 ? goNext() : goPrev();
   var r = stage.getBoundingClientRect();
   var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
   if (x < 0 || x > 1 || y < 0 || y > 1) return;
@@ -403,7 +406,7 @@ document.addEventListener('pointerup', function (e) {
     for (var k = 0; k < TAB_R.length; k++) if (mx >= TAB_R[k][0] - 28 && mx < TAB_R[k][1] + 28) return go(tabStart[k]);
     return;
   }
-  if (x < EDGE) go(cur - 1); else if (x > 1 - EDGE) goNext();
+  if (x < EDGE) goPrev(); else if (x > 1 - EDGE) goNext();
 });
 ['contextmenu', 'dragstart', 'selectstart', 'gesturestart'].forEach(function (ev) {
   document.addEventListener(ev, function (e) { e.preventDefault(); });
@@ -430,7 +433,7 @@ document.addEventListener('keydown', function (e) {
   else if (e.key === 'p' || e.key === 'P') { try { if (FORCE) sessionStorage.removeItem('iris-port'); else sessionStorage.setItem('iris-port', PORT ? '0' : '1'); } catch (x) {} location.reload(); }
   else if (onto.classList.contains('on')) return;  // 온톨로지 앱이 떠 있는 동안 뒤 장은 넘기지 않음
   else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') goNext();
-  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur - 1);
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') goPrev();
 });
 document.addEventListener('keyup', function (e) { if (e.key === 'Escape' && !isFs()) userExited = true; });
 // 터치 화면에서 전체화면 풀기: 왼쪽 위 로고를 3초 길게 누르면 전체화면 해제(주소창이 보임) + 다시 잠그지 않음.
