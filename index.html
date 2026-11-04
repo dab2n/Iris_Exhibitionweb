@@ -34,8 +34,8 @@
   body.portrait .arrow{width:6%;margin-top:-3%}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
     border:solid rgba(255,255,255,.9);border-width:0 2px 2px 0}
-  #prev{left:1.2%} #prev::after{transform:translateX(15%) rotate(135deg)}
-  #next{right:1.2%} #next::after{transform:translateX(-15%) rotate(-45deg)}
+  #prev{left:3.6%} #prev::after{transform:translateX(15%) rotate(135deg)}
+  #next{right:3.6%} #next::after{transform:translateX(-15%) rotate(-45deg)}
   #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
@@ -48,7 +48,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104174223';
+var V = 'v261104174543';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
