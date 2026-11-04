@@ -48,6 +48,12 @@
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
   /* Process 온톨로지 장: 하단 고정 '온톨로지 보러가기' → 시각화 앱을 전시 화면 위에 띄움(전체화면 유지), 오른쪽 위 '돌아가기' */
+  .slide video.bgv{object-fit:cover;z-index:0}
+  .veil{position:absolute;inset:0;background:rgba(247,248,248,.32);pointer-events:none}
+  .cw{position:absolute;inset:0;overflow:hidden}
+  /* 스크롤 내용이 메뉴 밑으로 지나갈 때·크레딧이 위아래 끝에서 나타나고 사라질 때 흐리게 */
+  .cw.m-top{-webkit-mask-image:linear-gradient(transparent 11.5%,#000 15.5%);mask-image:linear-gradient(transparent 11.5%,#000 15.5%)}
+  .cw.m-credit{-webkit-mask-image:linear-gradient(transparent 12%,#000 26%,#000 78%,transparent 94%);mask-image:linear-gradient(transparent 12%,#000 26%,#000 78%,transparent 94%)}
   .grow-l{position:absolute;inset:0;width:100%;height:100%;background-size:100% 100%;clip-path:var(--c0);-webkit-clip-path:var(--c0)}
   .slide.grow .grow-l{clip-path:var(--c1);-webkit-clip-path:var(--c1);transition:clip-path var(--t) cubic-bezier(.22,.61,.36,1) var(--d),-webkit-clip-path var(--t) cubic-bezier(.22,.61,.36,1) var(--d)}
   /* 새로 불러온 영상은 첫 장면이 준비되면 서서히 나타남(Design System 처음 들어갈 때 등) */
@@ -76,12 +82,12 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105023331';
+var V = 'v261105025732';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
 // Figma '여기' 섹션의 16:9 프레임을 내보낸 PNG. 파일명 = 프레임 이름 앞 5글자 (예: 02-03.png)
-var TABS = [['Background',2],['Research',4],['Process',3],['Design System',4],['Scenario',1],['Interface',15],['Credit',2]];
+var TABS = [['Background',2],['Research',5],['Process',1],['Design System',4],['Scenario',1],['Interface',15],['Credit',2]];
 // 세부 탭: 탭 번호 → [이름, 탭 안 시작 장]. Interface 메뉴 아래 작은 글씨(x 1536~1664, y 86~135) 터치 영역
 var SUBS = { 5: [['Web', 0], ['Mobile', 10]] }, SUB_X = 1627, SUB_W = 64, SUB_Y0 = 86, SUB_Y1 = 135;
 var W = 1920, H = 1080, NAV_H = 120, EDGE = 0.12;
@@ -92,9 +98,10 @@ var TAB_R = [[911,1015],[1071,1152],[1208,1278],[1334,1464],[1520,1596],[1652,17
 var SCROLL = {
   '02-01': { h: 1714, end: 634, delay: 4000 },
   '02-04': { h: 1953, end: 850, delay: 4000 },
-  '03-03': { h: 2110, end: 1030, delay: 4000 },
+  '03-01': { mask: 'top', h: 2110, end: 1030, delay: 4000 },
   '04-03': { h: 1869, end: 789, delay: 4000 },
-  '07-02': { h: 1236, end: 156, delay: 3000, ms: 6000 }  // 크레딧: 천천히
+  // 크레딧: 영화 크레딧처럼 한 줄씩 아래에서 올라옴(일정한 속도, 위아래 가장자리는 흐리게). 다음 버튼은 잠그지 않음
+  '07-02': { h: 6246, end: 5166, delay: 3000, ms: 47000, ease: 'linear', nolock: true, mask: 'credit' }
 };
 var SCROLL_MS = 1500, SCROLL_EASE = 'cubic-bezier(.65,0,.35,1)';  // 3차 ease-in-out: 천천히 출발 → 한 번에 쓱 → 부드럽게 멈춤(카메라 영상과 같은 곡선)
 // 카메라 영상(가로): 스크롤 장 전체 흐름(위 정렬로 나타남 → 4초 뒤 1.8초 동안 내려감 → 아래 영상)을 미리 렌더링한 한 편(tools/camera.sh).
@@ -102,6 +109,8 @@ var SCROLL_MS = 1500, SCROLL_EASE = 'cubic-bezier(.65,0,.35,1)';  // 3차 ease-i
 var CAM = { '02-01': { loop: 5.5 }, '02-04': { loop: null } };
 function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (p < .5 ? 4 * p * p * p : 1 - Math.pow(2 - 2 * p, 3) / 2); }
 // Research 02 그래프: s0 = 그래프 없는 배경, s1 = 줄무늬(40%) 없는 막대. 100%·44.2% 가 같이 차오르고, 100% 가 다 차면 40% 줄무늬가 차오름
+// 배경 영상 장: 글·이미지(투명 PNG, slides/키-fg.png)는 스크롤, 뒤에 영상이 화면 가득 깔려 반복(검은 띠는 잘라 냄)
+var BGV = { '03-01': 'media/03-01-bg.mp4' };
 var GROW = { '02-02': [
   { img: '-s0', x0: 960, x1: 1745, y1: 920, top: 360, from: 360, ms: 0, delay: 0 },
   { img: '-s1', x0: 960, x1: 1396, y1: 920, top: 360, ms: 1200, delay: 350 },
@@ -123,7 +132,7 @@ function pct(v, of) { return v / of * 100 + '%'; }
 function buildCanvas(key, ch, withVideo, vids) {
   var cv = document.createElement('div'), img = new Image();
   cv.className = 'canvas'; cv.style.height = ch / H * 100 + '%';
-  img.src = 'slides/' + key + '.png?' + V; img.draggable = false; cv.appendChild(img);
+  img.src = 'slides/' + key + (withVideo && BGV[key] ? '-fg' : '') + '.png?' + V; img.draggable = false; cv.appendChild(img);
   if (withVideo) OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
     if (ov.slide !== key) return;
     var v = document.createElement('video');
@@ -159,7 +168,7 @@ function sampleBg(img, el) {  // 화면 밖(비율이 맞지 않을 때 남는 �
         for (var r = 0; r < n * 2; r++) el.lum.push(0.2126 * q2[r * 4] + 0.7152 * q2[r * 4 + 1] + 0.0722 * q2[r * 4 + 2] < 140);
       }
       if (el.classList.contains('on')) arrowTheme(el);
-      if (el.scroll && el.navEl && !PORT) el.navEl.style.background = 'linear-gradient(' + el.bg + ' 83.3%, transparent)'; } catch (e) {}
+      if (el.scroll && el.navEl && !PORT && !el.bgv) el.navEl.style.background = 'linear-gradient(' + el.bg + ' 83.3%, transparent)'; } catch (e) {}
   });
 }
 TABS.forEach(function (t, ti) {
@@ -169,7 +178,15 @@ TABS.forEach(function (t, ti) {
     var el = document.createElement('div');
     el.className = 'slide'; el.videos = []; el.scroll = sc; el.key = key;
     if (!PORT) {
-      var c = buildCanvas(key, ch, true, el.videos); el.canvas = c.cv; el.appendChild(c.cv); sampleBg(c.img, el);
+      var c = buildCanvas(key, ch, true, el.videos); el.canvas = c.cv;
+      if (BGV[key]) {  // 뒤 배경 영상 + 글이 잘 읽히게 옅은 막
+        var bv = document.createElement('video'); bv.dataset.src = BGV[key] + '?' + V; bv.muted = bv.playsInline = bv.loop = true; bv.preload = 'none';
+        bv.setAttribute('muted', ''); bv.setAttribute('playsinline', ''); bv.className = 'bgv'; el.appendChild(bv); el.videos.push(bv);
+        var veil = document.createElement('div'); veil.className = 'veil'; el.appendChild(veil); el.bgv = bv;
+        var si = new Image(); si.src = 'slides/' + key + '.png?' + V; sampleBg(si, el);
+      } else sampleBg(c.img, el);
+      if (sc && sc.mask) { var cw = document.createElement('div'); cw.className = 'cw m-' + sc.mask; cw.appendChild(c.cv); el.appendChild(cw); }
+      else el.appendChild(c.cv);
       if (CAM[key]) {  // 카메라 영상은 캔버스 위, 메뉴 아래
         var cam = document.createElement('video'); cam.dataset.src = 'media/' + key + '-cam.mp4?' + V; cam.muted = cam.playsInline = true; cam.preload = 'none';
         cam.setAttribute('muted', ''); cam.setAttribute('playsinline', ''); cam.loopFrom = CAM[key].loop; el.cam = cam; el.appendChild(cam);
@@ -253,7 +270,7 @@ function setOff(el, off, ms, free) {
   // 관람자가 직접 끌거나 휠을 돌리면(free) 위로도 자유롭게 — 그 자리가 새 기준
   var sc = el.scroll; off = Math.max(free ? 0 : el.maxOff || 0, Math.min(sc.h - H, off)); el.off = off; el.maxOff = free ? off : Math.max(el.maxOff || 0, off);
   if (off >= sc.h - H - 1 && el === slides[cur]) setTimeout(function () { if (el === slides[cur]) unlockNext(); }, ms || 0);
-  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + (ms > SCROLL_MS * 2 ? 'cubic-bezier(.37,0,.63,1)' : SCROLL_EASE) : 'none';
+  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + (sc.ease || (ms > SCROLL_MS * 2 ? 'cubic-bezier(.37,0,.63,1)' : SCROLL_EASE)) : 'none';
   el.canvas.style.transform = 'translate3d(0,' + (-off / sc.h * 100) + '%,0)';
   if (off >= sc.end * 0.5) startAfter(el, ms);  // 아래 내용이 보이면 그 영상 재생
 }
@@ -289,7 +306,7 @@ function go(n) {
   arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
   warm(n);
   el.maxOff = 0; nextBtn.classList.remove('ready');
-  if (el.scroll) lockNext(); else { nextLocked = false; nextBtn.classList.remove('off'); }
+  if (el.scroll && !el.scroll.nolock) lockNext(); else { nextLocked = false; nextBtn.classList.remove('off'); }
   if (el.cam && !PORT) {
     el.manual = false; el.cam.style.visibility = ''; if (el.navEl) el.navEl.style.visibility = ''; el.off = 0; setOff(el, 0); play(el.cam);
     // 기기에서 영상이 1.2초 안에 시작하지 않으면 긴 이미지를 직접 내리는 방식으로 전환(메뉴·자동 스크롤이 멈춰 보이지 않게)
@@ -312,7 +329,7 @@ window.addEventListener('resize', function () { if (!FORCE && (window.innerHeigh
 var sx = null, sy = 0, dragging = false, startOff = 0;
 var idleT = null;
 // 온톨로지 시각화 앱(같은 dab2n.github.io 라 안쪽 터치도 무조작 타이머에 반영)
-var ONTO_SLIDE = '03-03', ONTO_URL = 'https://dab2n.github.io/iris-ontology/', onto = document.getElementById('onto'), ontoF = null;
+var ONTO_SLIDE = '03-01', ONTO_URL = 'https://dab2n.github.io/iris-ontology/', onto = document.getElementById('onto'), ontoF = null;
 function openOnto() {
   if (!ontoF) { ontoF = document.createElement('iframe'); ontoF.src = ONTO_URL; ontoF.allow = 'fullscreen';
     ontoF.addEventListener('load', function () { try { ['pointerdown', 'keydown', 'wheel'].forEach(function (ev) { ontoF.contentWindow.addEventListener(ev, poke, { passive: true }); }); } catch (e) {} });
