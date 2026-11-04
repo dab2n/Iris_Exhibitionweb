@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKIP = {'02-01', '02-04', '03-01', '04-01', '04-03', '07-02', '04-04'}  # 메뉴를 따로 얹는 장, 04-04 는 메뉴 아래가 큐브 영상(장면마다 색이 바뀜)
+SKIP = {'02-01', '02-04', '03-02', '04-01', '04-03', '06-02', '04-04'}  # 메뉴를 따로 얹는 장, 04-04 는 메뉴 아래가 큐브 영상(장면마다 색이 바뀜)
 L = lambda c: c @ np.array([.2126, .7152, .0722])
 
 def fix(p):
