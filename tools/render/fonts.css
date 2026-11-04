@@ -1,0 +1,10 @@
+/* 피그마 서버엔 SF Pro +KR 이 없어 한글이 대체 폰트로 나옴 → 한글 장은 이 맥에 설치된 폰트로 직접 렌더링(tools/render/render.sh) */
+@font-face{font-family:KR;font-weight:400;src:url(file:///Users/bugi/Library/Fonts/SFProKR-Regular-04.otf)}
+@font-face{font-family:KR;font-weight:500;src:url(file:///Users/bugi/Library/Fonts/SFProKR-Medium-05.otf)}
+@font-face{font-family:KR;font-weight:600;src:url(file:///Users/bugi/Library/Fonts/SFProKR-Semibold-06.otf)}
+@font-face{font-family:KR;font-weight:700;src:url(file:///Users/bugi/Library/Fonts/SFProKR-Bold-07.otf)}
+@font-face{font-family:HN;font-weight:400;src:url(file:///Users/bugi/Library/Fonts/HelveticaNowDisplay-Regular.ttf)}
+@font-face{font-family:SFD;font-weight:500;src:url(file:///Users/bugi/Library/Fonts/SFPRODISPLAYMEDIUM.OTF)}
+html,body{margin:0;padding:0}
+body{-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+.a{position:absolute;margin:0;white-space:pre}

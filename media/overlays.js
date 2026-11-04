@@ -208,9 +208,29 @@ var OVERLAYS = [
   "src": "media/06-08.mp4",
   "gbox": [
    377,
-   143,
+   243,
    1166,
    668
+  ],
+  "box": [
+   0.0,
+   0.1111111111111111,
+   1.0,
+   0.8888888888888888
+  ]
+ },
+ {
+  "slide": "06-10",
+  "after": false,
+  "loop": true,
+  "feather": false,
+  "fade": "",
+  "src": "media/06-10.mp4",
+  "gbox": [
+   916,
+   200,
+   826,
+   800
   ],
   "box": [
    0.0,
@@ -226,26 +246,6 @@ var OVERLAYS = [
   "feather": false,
   "fade": "",
   "src": "media/06-11.mp4",
-  "gbox": [
-   916,
-   200,
-   826,
-   800
-  ],
-  "box": [
-   0.0,
-   0.1111111111111111,
-   1.0,
-   0.8888888888888888
-  ]
- },
- {
-  "slide": "06-12",
-  "after": false,
-  "loop": true,
-  "feather": false,
-  "fade": "",
-  "src": "media/06-12.mp4",
   "gbox": [
    222,
    200,

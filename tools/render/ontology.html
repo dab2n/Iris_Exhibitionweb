@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- Process 02 Ontology: 피그마 블록 247:705(2000x2160) 좌표 그대로. 0.96 배로 렌더링 → slides/03-02.png (y+36). 녹화 자리 = slides 좌표 288,684 1344x840 -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="fonts.css">
+<style>
+body{width:2000px;height:2160px;background:#f7f8f8;position:relative;overflow:hidden}
+.lab{font:500 20px/1.4 SFD,KR;letter-spacing:-.02em;color:#a0a0a0}
+.t1{font:600 40px/1.4 KR;letter-spacing:-.03em;color:#000;text-align:center}
+.en{font:400 24px/1.7 HN;letter-spacing:-.03em;color:#857e7e;text-align:center}
+.b{font:400 22px/1.7 KR;letter-spacing:-.03em;color:#000}
+.en2{font:400 17px/1.7 HN;letter-spacing:-.02em;color:#a3a0a0;white-space:normal}
+.n{font:600 48px/1.2 KR;letter-spacing:-.03em;color:#000}
+.nm{font:600 20px/1.5 KR;letter-spacing:-.03em;color:#000}
+.d{font:400 17px/1.7 KR;letter-spacing:-.03em;color:#8c8c8c}
+#rec{position:absolute;left:300px;top:675px;width:1400px;height:875px;border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 48px rgba(18,43,74,.09);background:url(rec0.png) center/100% 100%}
+</style></head><body>
+<p class="a lab" style="left:202px;top:140px;width:1596px;text-align:center">Ontology</p>
+<p class="a t1" style="left:202px;top:196px;width:1596px">요약이 지우는 과정을 남기기 위해
+회의 온톨로지를 직접 설계했습니다</p>
+<p class="a en" style="left:202px;top:324px;width:1596px">Designing a Meeting Ontology to Keep What Summaries Erase</p>
+<p class="a b" style="left:202px;top:439px;width:1596px;text-align:center">줄글 요약은 결론만 남기고, 그 결론에 이른 근거와 과정은 지웁니다.
+그래서 회의에서 오간 말을 근거·쟁점·주장·결론·업무로 나누고,
+그 사이의 관계를 직접 정의해 하나의 그래프로 쌓았습니다.</p>
+<div id="rec"></div>
+<p class="a b" style="left:300px;top:1622px;width:700px">질문을 받으면 그래프를 따라 답을 찾고,
+그 답이 지나간 길만 맵 위에 켜집니다.
+답 아래에는 근거가 된 실제 발언이 시각과 함께 붙어,
+결론을 원문까지 되짚을 수 있어요.</p>
+<p class="a en2" style="left:1080px;top:1622px;width:620px">Ask a question and IRIS walks the graph, lighting only the path the answer travelled. Each answer carries the utterances it was built on, with timestamps, so any conclusion can be traced back to the transcript.</p>
+<div class="a" style="left:300px;top:1820px;width:1400px;height:1px;background:#e3e4e6"></div>
+<p class="a n" style="left:300px;top:1858px">170</p><p class="a nm" style="left:300px;top:1925px">노드 Nodes</p>
+<p class="a d" style="left:300px;top:1964px">근거·쟁점·주장·결론·업무와
+사람·파트·일정</p>
+<p class="a n" style="left:767px;top:1858px">392</p><p class="a nm" style="left:767px;top:1925px">관계 Edges</p>
+<p class="a d" style="left:767px;top:1964px">뒷받침·반박·채택·해결·담당 같은
+방향이 있는 의미 관계</p>
+<p class="a n" style="left:1233px;top:1858px">291</p><p class="a nm" style="left:1233px;top:1925px">발언에 명시 Explicit</p>
+<p class="a d" style="left:1233px;top:1964px">나머지 101개는 맥락에서 추론한
+관계로 따로 표시</p>
+</body></html>
