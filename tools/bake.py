@@ -15,5 +15,8 @@ for o in O:
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f'{root}/{o["src"]}', '-frames:v', '1', '-update', '1', f0], check=True)
     im = Image.open(p).convert('RGB'); fr = Image.open(f0).convert('RGB')
     x, y = round(o['box'][0] * 1920), round(o['box'][1] * ch); w, h = round(o['box'][2] * 1920), round(o['box'][3] * ch)
-    im.paste(fr.resize((w, h)) if fr.size != (w, h) else fr, (x, y)); im.save(p)
-    print(k, o['src'], (x, y, w, h))
+    if fr.size != (w, h): fr = fr.resize((w, h))
+    # 합성 영상 전체가 아니라 GIF 가 움직이는 영역만 붙임 — 영상에 담긴 옛 배치(글자 위치 등)가 PNG 로 번지지 않게
+    gx, gy, gw, gh = o.get('gbox', [x, y, w, h])
+    im.paste(fr.crop((gx - x, gy - y, gx - x + gw, gy - y + gh)), (gx, gy)); im.save(p)
+    print(k, o['src'], (gx, gy, gw, gh))

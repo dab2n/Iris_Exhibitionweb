@@ -41,7 +41,7 @@ for sl, f, fy, r in [('06-03','프레임1_일반요약-플로우맵-오른쪽스
 
 # Interface 레이아웃 통일(2026-11-04): 장별로 화면/이미지 영역 V0(옛 슬라이드 좌표)를 배율 k 로 키워 V1 에 둔다.
 # 영상은 V0 안쪽만 잘라 옮긴다(제목은 PNG 에서 따로 맞춤). 피그마 '여기' 프레임과 같은 값
-XF = {'06-01': ((848,320,984,613), .915, (880,319.5)),   '06-02': ((448,400,1024,640), .9375, (480,400)),
+XF = {'06-01': ((848,320,984,613), .915*.9556, (880,332)),   '06-02': ((448,400,1024,640), .9375, (480,400)),
       '06-03': ((479,385,960,627), 1, (480,400)),        '06-04': ((494,395,930,602), 960/930, (480,400)),
       '06-05': ((574,394,771,503), 960/771, (480,400)),  '06-07': ((544,432,832,553), 960/832, (480,400)),
       '06-08': ((431,297,1060,608), 1.1, (377,143.3)),   '06-11': ((885,150,941,910), .879, (916.5,200)),
@@ -84,6 +84,7 @@ if __name__ == '__main__':
             t = ROTATE[sl]
             vf = f"split[a][b];[a]trim=start={t},setpts=PTS-STARTPTS[x];[b]trim=end={t},setpts=PTS-STARTPTS[y];[x][y]concat," + vf
         name = f'media/{sl}.mp4'; ch = CANVAS_H.get(sl[:5], 1080)
+        gbox = [bx, by, bw, bh]  # GIF 가 움직이는 영역(합성 전). bake.py 는 여기만 PNG 에 붙임
         if sl in FEATHER:  # 영상만(좌우 흐림은 CSS)
             fc = f"[0:v]{vf}"; ins = ['-i', gif]
         else:  # 배경 띠 위에 합성
@@ -97,7 +98,7 @@ if __name__ == '__main__':
         else: subprocess.run(['ffmpeg','-y','-loglevel','error'] + ins + ['-filter_complex', fc, '-fps_mode','cfr','-r','50','-c:v','libx264','-crf','16','-preset','slow','-threads','3',
                         '-colorspace','bt709','-color_primaries','bt709','-color_trc','iec61966-2-1','-color_range','tv',
                         '-movflags','+faststart','-an'] + (['-t', str(NOLOOP[sl])] if sl in NOLOOP else []) + [f'{root}/{name}'], check=True)
-        out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, feather=sl in FEATHER, fade=FADE.get(sl, ''), src=name, box=[bx/1920, by/ch, bw/1920, bh/ch]))
+        out.append(dict(slide=sl[:5], after=sl.endswith('b'), loop=sl not in NOLOOP, feather=sl in FEATHER, fade=FADE.get(sl, ''), src=name, gbox=gbox, box=[bx/1920, by/ch, bw/1920, bh/ch]))
     if not check:
         open(f'{root}/media/overlays.js','w').write('var OVERLAYS = ' + json.dumps(out, indent=1) + ';\n')
         print(len(out), 'videos')

@@ -30,7 +30,8 @@
     mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 40px),transparent),linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent)}
   .win > div{position:absolute}
   .arrow{position:absolute;top:50%;width:3.4%;aspect-ratio:1;margin-top:-1.7%;border-radius:50%;z-index:5;
-    background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
+    background:rgba(127,127,127,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none;
+    box-shadow:0 2px 12px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08)}
   body.portrait .arrow{width:6%;margin-top:-3%}
   .arrow::after{content:"";position:absolute;inset:0;margin:auto;width:24%;height:24%;
     border:solid rgba(255,255,255,.9);border-width:0 2px 2px 0}
@@ -48,7 +49,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104175036';
+var V = 'v261104175628';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -160,7 +161,7 @@ function warm(n) {
 }
 function manual(el) {  // 카메라 영상 → 긴 이미지 직접 조작으로 전환
   if (!el.cam || el.manual) return; el.manual = true;
-  var t = el.cam.currentTime; el.cam.pause(); el.cam.style.visibility = 'hidden';
+  var t = el.cam.currentTime; el.cam.pause(); el.cam.style.visibility = 'hidden'; if (el.navEl) el.navEl.style.visibility = '';
   setOff(el, camOff(el.scroll, t));
   el.videos.forEach(function (v) { if (!v.after || t * 1000 >= el.scroll.delay + SCROLL_MS) play(v); else el.afterStarted = false; });
 }
@@ -172,7 +173,8 @@ function startAfter(el, ms) {
   setTimeout(function () { if (el.classList.contains('on')) el.videos.forEach(function (v) { if (v.after) play(v); }); }, ms || 0);
 }
 function setOff(el, off, ms) {
-  var sc = el.scroll; off = Math.max(0, Math.min(sc.h - H, off)); el.off = off;
+  // 한 번 내려간 곳보다 위로는 다시 올라가지 않음(자동 스크롤 목표를 정하면 그 끝까지가 기준)
+  var sc = el.scroll; off = Math.max(el.maxOff || 0, Math.min(sc.h - H, off)); el.off = off; el.maxOff = Math.max(el.maxOff || 0, off);
   el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + SCROLL_EASE : 'none';
   el.canvas.style.transform = 'translate3d(0,' + (-off / sc.h * 100) + '%,0)';
   if (off >= sc.end * 0.5) startAfter(el, ms);  // 아래 내용이 보이면 그 영상 재생
@@ -188,13 +190,14 @@ function go(n) {
       if (old.classList.contains('on')) return;
       old.classList.remove('prev');
       old.videos.forEach(function (v) { v.pause(); v.currentTime = 0; });
-      if (old.scroll && !PORT) setOff(old, 0);
-      if (old.cam) { old.cam.pause(); old.cam.style.visibility = ''; old.manual = false; }
+      if (old.scroll && !PORT) { old.maxOff = 0; setOff(old, 0); }
+      if (old.cam) { old.cam.pause(); old.cam.style.visibility = ''; old.manual = false; if (old.navEl) old.navEl.style.visibility = 'hidden'; }
     }, 400);
   }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg;
   warm(n);
-  if (el.cam && !PORT) { el.manual = false; el.cam.style.visibility = ''; el.off = 0; setOff(el, 0); play(el.cam); return; }
+  el.maxOff = 0;
+  if (el.cam && !PORT) { el.manual = false; el.cam.style.visibility = ''; if (el.navEl) el.navEl.style.visibility = 'hidden'; el.off = 0; setOff(el, 0); play(el.cam); return; }
   el.videos.forEach(function (v) { if (!v.after) play(v); else { v.pause(); if (v.currentTime) v.currentTime = 0; } });
   var sc = el.scroll;
   if (sc) {

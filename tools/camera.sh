@@ -5,14 +5,28 @@
 cd "$(dirname "$0")/.."
 ENC="-fps_mode cfr -r 50 -c:v libx264 -crf 16 -preset slow -threads 3 -colorspace bt709 -color_primaries bt709 -color_trc iec61966-2-1 -color_range tv -movflags +faststart -an"
 CS="scale=out_color_matrix=bt709:out_range=tv,format=yuv420p"
+# 메뉴 줄(장 맨 위 색 + 메뉴 글자, 아래 24px 흐려짐)을 영상에 같이 그림 — 웹 메뉴 배경과 영상 색이 기기마다 달라 보이는 것 방지
+T=$(mktemp -d)
+mknav() { python3 - "$1" "$T/cnav_$1.png" <<'PY'
+import sys
+from PIL import Image
+k, out = sys.argv[1], sys.argv[2]
+c = Image.open(f'slides/{k}.png').convert('RGB').getpixel((4, 4))
+s = Image.new('RGBA', (1920, 144), c + (255,)); s.alpha_composite(Image.open(f'slides/{k}-nav.png').convert('RGBA'), (0, 0))
+a = s.getchannel('A')
+for y in range(120, 144): a.paste(int(255 * (1 - (y - 120) / 24)), (0, y, 1920, y + 1))
+s.putalpha(a); s.save(out)
+PY
+}
+mknav 02-01; mknav 02-04
 Y() { echo "if(lt(t,4),0,if(gt(t,5.8),$1,$1*(1-cos(PI*(t-4)/1.8))/2))"; }   # 카메라 y(t)
 
 # Research 01: 위 그래프(02-01, 반복) 는 처음부터, 아래 그래프(02-01b) 는 이동이 끝난 5.8초부터. 전체 16.3초, JS 가 5.8초~끝을 반복
-nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/02-01.png -stream_loop -1 -i media/02-01.mp4 -i media/02-01b.mp4 -filter_complex \
- "[0:v]format=rgb24[bg];[2:v]tpad=start_duration=5.8:start_mode=clone[b];[bg][1:v]overlay=0:267:eof_action=repeat[x];[x][b]overlay=0:933:eof_action=repeat,crop=1920:1080:0:'$(Y 634)',trim=duration=16.3,$CS" \
+nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/02-01.png -stream_loop -1 -i media/02-01.mp4 -i media/02-01b.mp4 -loop 1 -i $T/cnav_02-01.png -filter_complex \
+ "[0:v]format=rgb24[bg];[2:v]tpad=start_duration=5.8:start_mode=clone[b];[bg][1:v]overlay=0:267:eof_action=repeat[x];[x][b]overlay=0:933:eof_action=repeat,crop=1920:1080:0:'$(Y 634)'[c];[c][3:v]overlay=0:0,trim=duration=16.3,$CS" \
  $ENC media/02-01-cam.mp4
 # Research 04: 아래 카드(02-04b, 한 번) 는 5.8초부터 3초, 끝 장면에서 멈춤. 전체 8.8초
-nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/02-04.png -i media/02-04b.mp4 -filter_complex \
- "[0:v]format=rgb24[bg];[1:v]tpad=start_duration=5.8:start_mode=clone[b];[bg][b]overlay=0:979:eof_action=repeat,crop=1920:1080:0:'$(Y 850)',trim=duration=8.8,$CS" \
+nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/02-04.png -i media/02-04b.mp4 -loop 1 -i $T/cnav_02-04.png -filter_complex \
+ "[0:v]format=rgb24[bg];[1:v]tpad=start_duration=5.8:start_mode=clone[b];[bg][b]overlay=0:979:eof_action=repeat,crop=1920:1080:0:'$(Y 850)'[c];[c][2:v]overlay=0:0,trim=duration=8.8,$CS" \
  $ENC media/02-04-cam.mp4
 ls -la media/*-cam.mp4
