@@ -76,7 +76,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261104220536';
+var V = 'v261105023331';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -96,11 +96,11 @@ var SCROLL = {
   '04-03': { h: 1869, end: 789, delay: 4000 },
   '07-02': { h: 1236, end: 156, delay: 3000, ms: 6000 }  // 크레딧: 천천히
 };
-var SCROLL_MS = 1800, SCROLL_EASE = 'cubic-bezier(.37,0,.63,1)';  // 사인 곡선(카메라 영상과 같은 움직임)
+var SCROLL_MS = 1500, SCROLL_EASE = 'cubic-bezier(.65,0,.35,1)';  // 3차 ease-in-out: 천천히 출발 → 한 번에 쓱 → 부드럽게 멈춤(카메라 영상과 같은 곡선)
 // 카메라 영상(가로): 스크롤 장 전체 흐름(위 정렬로 나타남 → 4초 뒤 1.8초 동안 내려감 → 아래 영상)을 미리 렌더링한 한 편(tools/camera.sh).
 // 손으로 끌거나 휠을 돌리면 그때부터 긴 이미지로 바꿔 직접 움직임. loop = 이 초부터 끝까지 반복(null 이면 끝 장면에서 멈춤)
-var CAM = { '02-01': { loop: 5.8 }, '02-04': { loop: null } };
-function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (1 - Math.cos(Math.PI * p)) / 2; }
+var CAM = { '02-01': { loop: 5.5 }, '02-04': { loop: null } };
+function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (p < .5 ? 4 * p * p * p : 1 - Math.pow(2 - 2 * p, 3) / 2); }
 // Research 02 그래프: s0 = 그래프 없는 배경, s1 = 줄무늬(40%) 없는 막대. 100%·44.2% 가 같이 차오르고, 100% 가 다 차면 40% 줄무늬가 차오름
 var GROW = { '02-02': [
   { img: '-s0', x0: 960, x1: 1745, y1: 920, top: 360, from: 360, ms: 0, delay: 0 },
@@ -253,7 +253,7 @@ function setOff(el, off, ms, free) {
   // 관람자가 직접 끌거나 휠을 돌리면(free) 위로도 자유롭게 — 그 자리가 새 기준
   var sc = el.scroll; off = Math.max(free ? 0 : el.maxOff || 0, Math.min(sc.h - H, off)); el.off = off; el.maxOff = free ? off : Math.max(el.maxOff || 0, off);
   if (off >= sc.h - H - 1 && el === slides[cur]) setTimeout(function () { if (el === slides[cur]) unlockNext(); }, ms || 0);
-  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + SCROLL_EASE : 'none';
+  el.canvas.style.transition = ms ? 'transform ' + ms + 'ms ' + (ms > SCROLL_MS * 2 ? 'cubic-bezier(.37,0,.63,1)' : SCROLL_EASE) : 'none';
   el.canvas.style.transform = 'translate3d(0,' + (-off / sc.h * 100) + '%,0)';
   if (off >= sc.end * 0.5) startAfter(el, ms);  // 아래 내용이 보이면 그 영상 재생
 }
