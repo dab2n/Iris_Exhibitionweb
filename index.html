@@ -15,6 +15,8 @@
   .slide img,.slide video{position:absolute;left:0;top:0;width:100%;height:100%;-webkit-user-drag:none;object-fit:fill}
   .canvas{position:absolute;left:0;top:0;width:100%;will-change:transform}
   .slide img.nav{height:11.111%}
+  /* 스크롤 장 메뉴: 장 배경색을 깔고 아래 24px 은 흐리게 — 올라가는 콘텐츠가 메뉴 글자와 겹치지 않게 */
+  .slide img.nav.solid{height:13.333%;object-fit:contain;object-position:top}
   .slide video.fade-t{-webkit-mask-image:linear-gradient(transparent,#000 40px);mask-image:linear-gradient(transparent,#000 40px)}
   .slide video.fade-b{-webkit-mask-image:linear-gradient(#000 calc(100% - 40px),transparent);mask-image:linear-gradient(#000 calc(100% - 40px),transparent)}
   .slide video.fade-tb{-webkit-mask-image:linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(transparent,#000 40px,#000 calc(100% - 40px),transparent)}
@@ -66,7 +68,8 @@ TABS.forEach(function (t, ti) {
     cv.appendChild(img); el.appendChild(cv);
     img.onload = function () {  // 화면 밖(비율이 16:9 가 아닐 때 남는 곳) 배경 = 슬라이드 왼쪽 위 색
       try { var c = document.createElement('canvas').getContext('2d'); c.drawImage(this, -4, -4); var d = c.getImageData(0, 0, 1, 1).data;
-        var s = this.parentNode.parentNode; s.bg = 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')'; if (s.classList.contains('on')) document.body.style.background = s.bg; } catch (e) {}
+        var s = this.parentNode.parentNode; s.bg = 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')'; if (s.classList.contains('on')) document.body.style.background = s.bg;
+        if (s.scroll && s.navEl) s.navEl.style.background = 'linear-gradient(' + s.bg + ' 83.3%, transparent)'; } catch (e) {}
     };
     OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
       if (ov.slide !== key) return;
@@ -78,7 +81,7 @@ TABS.forEach(function (t, ti) {
       if (ov.feather) v.className = 'feather'; else if (ov.fade) v.className = 'fade-' + ov.fade;
       cv.appendChild(v); el.videos.push(v);
     });
-    if (sc || NAV_ON_TOP.indexOf(key) >= 0) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = 'nav'; nv.draggable = false; el.appendChild(nv); }
+    if (sc || NAV_ON_TOP.indexOf(key) >= 0) { var nv = new Image(); nv.src = 'slides/' + key + '-nav.png'; nv.className = sc ? 'nav solid' : 'nav'; nv.draggable = false; el.appendChild(nv); el.navEl = nv; }
     stage.insertBefore(el, stage.firstChild);
     slides.push(el); tabOf.push(ti);
   }
