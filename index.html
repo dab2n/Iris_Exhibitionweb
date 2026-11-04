@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105051207';
+var V = 'v261105051528';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -96,7 +96,7 @@ var TAB_R = [[1045,1149],[1205,1286],[1342,1412],[1468,1598],[1654,1730],[1786,1
 var SCROLL = {
   '02-01': { h: 1714, end: 634, delay: 4000 },
   '02-04': { h: 1953, end: 850, delay: 4000 },
-  '03-02': { h: 2110, end: 1030, delay: 4000 },
+  '03-01': { h: 2110, end: 1030, delay: 4000 },
   '04-03': { h: 1869, end: 789, delay: 4000 },
   // 크레딧: 영화 크레딧처럼 한 줄씩 아래에서 올라옴(일정한 속도, 위아래 가장자리는 흐리게). 다음 버튼은 잠그지 않음
   '06-02': { h: 6246, end: 5166, delay: 3000, ms: 47000, ease: 'linear', nolock: true, mask: 'credit' }
@@ -104,7 +104,7 @@ var SCROLL = {
 var SCROLL_MS = 1500, SCROLL_EASE = 'cubic-bezier(.65,0,.35,1)';  // 3차 ease-in-out: 천천히 출발 → 한 번에 쓱 → 부드럽게 멈춤(카메라 영상과 같은 곡선)
 // 카메라 영상(가로): 스크롤 장 전체 흐름(위 정렬로 나타남 → 4초 뒤 1.8초 동안 내려감 → 아래 영상)을 미리 렌더링한 한 편(tools/camera.sh).
 // 손으로 끌거나 휠을 돌리면 그때부터 긴 이미지로 바꿔 직접 움직임. loop = 이 초부터 끝까지 반복(null 이면 끝 장면에서 멈춤)
-var CAM = { '02-01': { loop: 5.5 }, '02-04': { loop: null }, '03-02': { loop: 0 } };
+var CAM = { '02-01': { loop: 5.5 }, '02-04': { loop: null }, '03-01': { loop: 0 } };
 function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (p < .5 ? 4 * p * p * p : 1 - Math.pow(2 - 2 * p, 3) / 2); }
 // Research 02 그래프: s0 = 그래프 없는 배경, s1 = 줄무늬(40%) 없는 막대. 100%·44.2% 가 같이 차오르고, 100% 가 다 차면 40% 줄무늬가 차오름
 // Process 02 온톨로지: 화면 녹화를 장 안(피그마 '온톨로지 웹 화면' 자리, 모서리 12px)에 — 스크롤 뒤 손으로 움직일 때용(내려가는 동안은 카메라 영상)
@@ -112,7 +112,7 @@ function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) /
 OVERLAYS.push({ slide: '05-01', src: 'media/05-01-film.mp4', box: [0, 255 / 1080, 1, 824 / 1080], loop: false },
               { slide: '05-11', src: 'media/05-11-film.mp4', box: [0, 255 / 1080, 1, 824 / 1080], loop: false });
 var TOPS = ['05-01', '05-11', '05-03', '05-08', '05-09'];  // 05-03·08·09: 화면 베젤 통일(회색 8px) 고리
-OVERLAYS.push({ slide: '03-02', src: 'media/03-02-rec.mp4', box: [288 / 1920, 684 / 2110, 1344 / 1920, 840 / 2110], loop: true, round: true });
+OVERLAYS.push({ slide: '03-01', src: 'media/03-01-rec.mp4', box: [288 / 1920, 684 / 2110, 1344 / 1920, 840 / 2110], loop: true, round: true });
 var GROW = { '02-02': [
   { img: '-s0', x0: 960, x1: 1745, y1: 920, top: 360, from: 360, ms: 0, delay: 0 },
   { img: '-s1', x0: 960, x1: 1396, y1: 920, top: 360, ms: 1200, delay: 350 },
@@ -327,7 +327,7 @@ window.addEventListener('resize', function () { if (!FORCE && (window.innerHeigh
 var sx = null, sy = 0, dragging = false, startOff = 0;
 var idleT = null;
 // 온톨로지 시각화 앱(같은 dab2n.github.io 라 안쪽 터치도 무조작 타이머에 반영)
-var ONTO_SLIDE = '03-02', ONTO_URL = 'https://dab2n.github.io/iris-ontology/', onto = document.getElementById('onto'), ontoF = null;
+var ONTO_SLIDE = '03-01', ONTO_URL = 'https://dab2n.github.io/iris-ontology/', onto = document.getElementById('onto'), ontoF = null;
 function openOnto() {
   if (!ontoF) { ontoF = document.createElement('iframe'); ontoF.src = ONTO_URL; ontoF.allow = 'fullscreen';
     ontoF.addEventListener('load', function () { try { ['pointerdown', 'keydown', 'wheel'].forEach(function (ev) { ontoF.contentWindow.addEventListener(ev, poke, { passive: true }); }); } catch (e) {} });

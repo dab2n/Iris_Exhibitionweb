@@ -11,7 +11,7 @@ CY, MAXW, MAXH = 1330, 1320, 1900     # 묶음 중심 y, 최대 폭/높이
 PAD = 44                              # 창 가장자리 흐림(40px)보다 넉넉히
 T1 = ['05-04', '05-05', '05-06', '05-08', '05-10']           # 제목 위 + 화면
 T2 = ['05-02', '05-12', '05-16']  # 글 왼쪽 + 이미지 오른쪽
-SCROLL = {'02-01': 1714, '02-04': 1953, '03-02': 2110, '04-03': 1869, '06-02': 6246}
+SCROLL = {'02-01': 1714, '02-04': 1953, '03-01': 2110, '04-03': 1869, '06-02': 6246}
 NAV_ON_TOP = {'04-01': (180, 120, 1560, 960)}                # 영상이 메뉴까지 덮는 장: 메뉴 줄 빼고 영상 영역만
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -57,7 +57,7 @@ for f in sorted(os.listdir(f'{root}/slides')):
         e['wins'] = [[0, 0, 1920, SCROLL[key], 0, round(max(NAV, CY - h / 2), 1), k, True]]
     elif key in NAV_ON_TOP:
         b = list(NAV_ON_TOP[key]); e['wins'] = stack([(b, min(MAXW / b[2], 1.2), True)], 0)
-    elif key in T1:
+    elif key in T1 and bbox(a, (0, 125, 1920, 265)) and bbox(a, (0, 392, 1920, 688)):
         t = bbox(a, (0, 125, 1920, 265)); v = bbox(a, (0, 392, 1920, 688))
         e['wins'] = stack([(t, min(1.3, MAXW / t[2]), False), (v, min(1.45, MAXW / v[2], 1000 / v[3]), True)], 70)
     elif key in T2:

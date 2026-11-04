@@ -30,11 +30,11 @@ nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/02-04.png -
  "[0:v]format=rgb24[bg];[1:v]tpad=start_duration=5.5:start_mode=clone[b];[bg][b]overlay=0:979:eof_action=repeat,crop=1920:1080:0:'$(Y 850)'[c];[c][2:v]overlay=0:0,trim=duration=8.5,$CS" \
  $ENC media/02-04-cam.mp4
 # Process 02 온톨로지: 화면 녹화(모서리 12px 둥글게)를 처음부터, 녹화 한 바퀴(17.5초)와 같은 길이 → 끝나면 웹이 긴 이미지 + 장 안 녹화(처음부터)로 이어 받음
-mknav 03-02
+mknav 03-01
 python3 -c "
 from PIL import Image, ImageDraw
 m = Image.new('L', (1344, 840), 0); ImageDraw.Draw(m).rounded_rectangle((0, 0, 1343, 839), 11.5, fill=255); m.save('$T/round.png')"
-nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/03-02.png -i media/03-02-rec.mp4 -loop 1 -i $T/round.png -loop 1 -i $T/cnav_03-02.png -filter_complex \
+nice -n 19 ffmpeg -y -loglevel error -loop 1 -framerate 50 -i slides/03-01.png -i media/03-01-rec.mp4 -loop 1 -i $T/round.png -loop 1 -i $T/cnav_03-01.png -filter_complex \
  "[0:v]format=rgb24[bg];[1:v]fps=50,format=rgba[r];[2:v]format=gray[m];[r][m]alphamerge[rr];[bg][rr]overlay=288:684:eof_action=repeat,crop=1920:1080:0:'$(Y 1030)'[c];[c][3:v]overlay=0:0,trim=duration=17.5,$CS" \
- $ENC media/03-02-cam.mp4
+ $ENC media/03-01-cam.mp4
 ls -la media/*-cam.mp4

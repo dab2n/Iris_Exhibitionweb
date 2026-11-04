@@ -10,7 +10,7 @@ from PIL import Image
 R = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(os.path.dirname(R))
 TABS = [('Background', 2), ('Research', 5), ('Process', 2), ('Design System', 4), ('Scenario', 16), ('Credit', 2)]
 SUB = {4: [('Web', 0, 10), ('Mobile', 10, 6)]}   # 탭 번호: [(이름, 시작 장, 장 수)]
-SEP = {'02-01', '02-04', '03-02', '04-03', '06-02', '04-01'}  # 메뉴를 따로 얹는 장
+SEP = {'02-01', '02-04', '03-01', '04-03', '06-02', '04-01'}  # 메뉴를 따로 얹는 장
 W18 = {'Background': 104, 'Research': 81, 'Process': 70, 'Design System': 130, 'Scenario': 76, 'Credit': 54}  # 피그마 글자 폭
 GAP, RIGHT = 56, 1840
 
