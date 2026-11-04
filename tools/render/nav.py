@@ -67,7 +67,10 @@ if __name__ == '__main__':
         nav = sheet.crop((0, 120 * i, 1920, 120 * i + 120))
         if key in SEP: nav.save(f'{root}/slides/{key}-nav.png')
         else:
-            im = Image.open(f'{root}/slides/{key}.png').convert('RGB'); band = Image.new('RGBA', (1920, 120), bg + (255,)); band.alpha_composite(nav)
+            im = Image.open(f'{root}/slides/{key}.png').convert('RGB')
+            # 메뉴 띠 배경 = 줄마다 왼쪽 끝(0~40px) 색 → 그라디언트 장도 메뉴와 콘텐츠가 이어짐
+            col = np.median(np.asarray(im)[:120, :40], axis=1).astype('uint8')
+            band = Image.fromarray(np.repeat(col[:, None, :], 1920, axis=1)).convert('RGBA'); band.alpha_composite(nav)
             im.paste(band.convert('RGB'), (0, 0)); im.save(f'{root}/slides/{key}.png')
     L = layout(); print('TAB_R', json.dumps([[x, x + w] for _, x, w in L]), 'SUB_X', L[4][1] + L[4][2] / 2 - 64)
     print(len(rows), 'navs')

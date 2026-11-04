@@ -1,7 +1,8 @@
 """GIF → 슬라이드 영역에 맞춘 mp4 로 변환. python3 tools/overlays.py [check]
 각 항목: slide, gif, 블록 크기(B, Figma 원본 블록 px), 슬라이드에서의 창 크롭 r(블록 좌표), 배치 d=(x,y,scale)
 recording 은 블록이 아닌 화면 녹화라 r 대신 box 를 직접 지정."""
-import json, os, subprocess, sys
+import json, os, subprocess, sys, tempfile
+TMP = tempfile.mkdtemp()  # 합성용 배경 띠 등 임시 파일
 from PIL import Image
 H = os.path.expanduser('~')
 D = H + '/Desktop/'; DL = H + '/Downloads/iris-gif/'
@@ -19,7 +20,7 @@ O = [  # slide, gif, block(w,h), region r, placement (x,y,s)
  ('05-02', D+'Iris_FlowMap_4000.gif',             (2000,1324), (100,100,1800,1110), cy(800,1080,1800,1110)),
  ('04-04', D+'Iris_CubeSlides_2000_HQ.gif',       (2000,1064), (0,32,2000,1000),  (0,120,0.96)),  # 위아래 32px 씩 고르게 잘라 메뉴 아래를 꽉 채움
  ('05-03', DL+'요약-플로우맵-전환.gif',              (1024,640),  (0,0,1024,640),    (448,400,1.0)),
- ('05-06', D+'Iris_FlowMapCardSelect_2000.gif',   (2000,1543), (0,0,2000,1543),   fit(2000,1543,840)),
+ ('05-06', D+'Iris_Behance/03_Iris_FlowMapCardSelect_2000.gif', (2000,1541), (0,70,2000,1310), (1920/2-2000*960/1310/2,120,960/1310)),  # (High) 글 포함 GIF, 위아래 여백만 잘라 메뉴 아래를 꽉 채움. 배경은 GIF 가장자리 그라디언트
  ('05-08', D+'Iris_Figjam_2000.gif',              (2000,1543), (0,0,2000,1543),   fit(2000,1543,840)),
  ('05-09', D+'Iris_Notion_2000.gif',              (2000,1403), (0,0,2000,1403),   fit(2000,1403,840)),
  ('05-12', D+'Iris_Recording_2000.gif',           (2000,1162), (420,20,1160,1122),(885,150,0.811)),
@@ -41,11 +42,10 @@ for sl, f, fy, r in []:
 
 # Interface 레이아웃 통일(2026-11-04): 장별로 화면/이미지 영역 V0(옛 슬라이드 좌표)를 배율 k 로 키워 V1 에 둔다.
 # 영상은 V0 안쪽만 잘라 옮긴다(제목은 PNG 에서 따로 맞춤). 피그마 '여기' 프레임과 같은 값
-XF = {'05-02': ((848,320,984,613), .915*.9556, (880,332)),   '05-03': ((448,400,1024,640), .9375, (480,300)),
-      '05-04': ((479,385,960,627), 1, (480,400)),        '05-05': ((494,395,930,602), 960/930, (480,400)),
-      '05-06': ((574,394,771,503), 960/771, (480,400)),  '05-08': ((544,432,832,553), 960/832, (480,400)),
+XF = {'05-02': ((848,320,984,613), .915*.9556, (880,332)),   '05-03': ((448,400,1024,640), .9375*1.5, (240,150)),
+      '05-04': ((479,385,960,627), 1, (480,400)),        '05-05': ((494,395,930,602), 960/930, (480,400)),  '05-08': ((544,432,832,553), 960/832, (480,400)),
       '05-09': ((431,297,1060,608), 1551/1060, (184.5,155)),   '05-12': ((885,150,941,910), .879, (916.5,200)),
-      '05-13': ((106,137,1707,925), .865, (222,200))}
+      '05-13': ((106,137,1707,925), 1640/1707, (140,156))}
 def remap(b, V0, k, V1):
     bx, by, bw, bh = b['box']; cx, cy, cw, ch = b['crop']; sx, sy = cw / bw, ch / bh
     x0, y0 = max(bx, V0[0]), max(by, V0[1]); x1, y1 = min(bx + bw, V0[0] + V0[2]), min(by + bh, V0[1] + V0[3])
@@ -77,7 +77,7 @@ if __name__ == '__main__':
             im.seek(im.n_frames - 1); fr = im.convert('RGB')
             if b['crop']: fr = fr.crop(tuple(round(v*g) for v in (b['crop'][0], b['crop'][1], b['crop'][0]+b['crop'][2], b['crop'][1]+b['crop'][3])))
             base = Image.open(f'{root}/slides/{sl[:5]}.png').convert('RGB'); base.paste(fr.resize((bw, bh)), (bx, by))
-            base.save(f'/private/tmp/claude-501/-Users-bugi/06fa9a8d-6a63-4309-b4cc-1ac1b1af8b0e/scratchpad/gif/chk_{sl}.png'); continue
+            base.save(f'{TMP}/chk_{sl}.png'); continue
         vf = (f"crop={round(b['crop'][2]*g)}:{round(b['crop'][3]*g)}:{round(b['crop'][0]*g)}:{round(b['crop'][1]*g)}," if b['crop'] else '') + \
              f"scale={bw}:{bh}:flags=lanczos"
         if sl in ROTATE:
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         else:  # 배경 띠 위에 합성
             # 스크롤 장은 그 띠만, 나머지는 메뉴까지 화면 전체(메뉴 PNG 와 영상 사이 압축 색차로 띠가 보이던 것 방지). 메뉴가 바뀌면 다시 인코딩
             top = by if sl[:5] in CANVAS_H else 0; hh = bh if sl[:5] in CANVAS_H else 1080
-            band = f'/private/tmp/claude-501/-Users-bugi/06fa9a8d-6a63-4309-b4cc-1ac1b1af8b0e/scratchpad/band_{sl}.png'
+            band = f'{TMP}/band_{sl}.png'
             Image.open(f'{root}/slides/{sl[:5]}.png').convert('RGB').crop((0, top, 1920, top + hh)).save(band)
             fc = f"[1:v]{vf}[g];[0:v][g]overlay={bx}:{by - top}:shortest=1"; ins = ['-loop', '1', '-framerate', '50', '-i', band, '-i', gif]
             bx, by, bw, bh = 0, top, 1920, hh
