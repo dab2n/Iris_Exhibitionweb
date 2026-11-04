@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105082850';
+var V = 'v261105083453';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -190,7 +190,9 @@ TABS.forEach(function (t, ti) {
         cam.addEventListener('timeupdate', function () {  // 카메라가 맨 아래에 닿으면 다음 버튼 켬
           var s = this.parentNode; if (s === slides[cur] && !s.manual && this.currentTime * 1000 >= s.scroll.delay + SCROLL_MS - 60) unlockNext(); });
         cam.addEventListener('timeupdate', function () {  // 영상이 실제로 돌기 시작하면 그때 HTML 메뉴를 숨김(영상에 메뉴가 그려져 있음)
-          var s = this.parentNode; if (s.manual) { this.pause(); return; } if (this.currentTime > 0.05 && s.navEl) s.navEl.style.visibility = 'hidden'; });
+          var s = this.parentNode; if (s.manual) this.pause(); });
+        // 영상(메뉴가 그려져 있음)이 실제로 화면에 나타나는 순간에 HTML 메뉴를 숨김 — 둘 다 안 보이는 틈이 없게
+        cam.onShown = function () { var s = this.parentNode; if (!s.manual && s.navEl && s === slides[cur]) s.navEl.style.visibility = 'hidden'; };
         // 끝나면 되감지 않음(TV 는 되감을 때 앞 장면이 보여 화면이 위로 튐) → 맨 아래에 둔 긴 이미지 + 그 안 영상 반복으로 넘김
         cam.addEventListener('ended', function () { var s = this.parentNode; if (this.loopFrom != null && s === slides[cur]) manual(s); });
       }
@@ -233,7 +235,7 @@ function pad(n) { return (n < 10 ? '0' : '') + n; }
 function hideUntilFrame(v) {
   var tok = (v.hideTok || 0) + 1; v.hideTok = tok;
   v.style.transition = 'none'; v.style.opacity = 0; void v.offsetWidth;
-  var show = function () { if (v.hideTok !== tok) return; v.style.transition = v.classList.contains('feather') ? '' : 'none'; v.style.opacity = ''; };
+  var show = function () { if (v.hideTok !== tok) return; v.style.transition = v.classList.contains('feather') ? '' : 'none'; v.style.opacity = ''; if (v.onShown) v.onShown(); };
   if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(function () { requestAnimationFrame(show); });
   else { var h = function () { if (v.currentTime > 0.04) { v.removeEventListener('timeupdate', h); show(); } }; v.addEventListener('timeupdate', h); }
 }
