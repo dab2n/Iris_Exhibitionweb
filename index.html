@@ -55,7 +55,7 @@
   .grow-l{position:absolute;inset:0;width:100%;height:100%;background-size:100% 100%;clip-path:var(--c0);-webkit-clip-path:var(--c0)}
   .slide.grow .grow-l{clip-path:var(--c1);-webkit-clip-path:var(--c1);transition:clip-path var(--t) cubic-bezier(.22,.61,.36,1) var(--d),-webkit-clip-path var(--t) cubic-bezier(.22,.61,.36,1) var(--d)}
   /* 새로 불러온 영상은 첫 장면이 준비되면 서서히 나타남(Design System 처음 들어갈 때 등) */
-  .slide video{transition:opacity .5s ease}
+  .slide video{transition:opacity .35s ease}
   .pill{position:absolute;z-index:8;border:0;border-radius:999px;display:flex;align-items:center;gap:.5em;white-space:nowrap;
     font:500 clamp(13px,0.94vw,18px)/1 "SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;letter-spacing:-.01em;
     transition:opacity .35s ease,transform .2s ease}
@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105091535';
+var V = 'v261105100554';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -235,7 +235,8 @@ function pad(n) { return (n < 10 ? '0' : '') + n; }
 function hideUntilFrame(v) {
   var tok = (v.hideTok || 0) + 1; v.hideTok = tok;
   v.style.transition = 'none'; v.style.opacity = 0; void v.offsetWidth;
-  var show = function () { if (v.hideTok !== tok) return; v.style.transition = v.classList.contains('feather') ? '' : 'none'; v.style.opacity = ''; if (v.onShown) v.onShown(); };
+  // 아래 이미지 → 영상은 0.35초 동안 서서히 겹쳐 바꿈(기기마다 영상 색이 미세하게 달라 한 번에 바꾸면 화면 전체가 깜빡여 보임)
+  var show = function () { if (v.hideTok !== tok) return; v.hideTok = tok + 0.5; v.style.transition = ''; v.style.opacity = ''; if (v.onShown) setTimeout(function () { v.onShown(); }, 400); };
   // 기기마다 신호가 달라 여러 가지 중 먼저 오는 것으로 보이게 하고, 0.8초 뒤엔 무조건 보이게(영상이 숨겨진 채 남지 않게)
   if (v.requestVideoFrameCallback) try { v.requestVideoFrameCallback(function () { requestAnimationFrame(show); }); } catch (e) {}
   // 재생 시간이 실제로 흐르면(=장면이 그려지고 있음) 보임. '재생 시작' 신호만으로는 TV 가 아직 검은 화면일 수 있어 쓰지 않음
