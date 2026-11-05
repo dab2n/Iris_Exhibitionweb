@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105090139';
+var V = 'v261105091004';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -238,9 +238,9 @@ function hideUntilFrame(v) {
   var show = function () { if (v.hideTok !== tok) return; v.style.transition = v.classList.contains('feather') ? '' : 'none'; v.style.opacity = ''; if (v.onShown) v.onShown(); };
   // 기기마다 신호가 달라 여러 가지 중 먼저 오는 것으로 보이게 하고, 0.8초 뒤엔 무조건 보이게(영상이 숨겨진 채 남지 않게)
   if (v.requestVideoFrameCallback) try { v.requestVideoFrameCallback(function () { requestAnimationFrame(show); }); } catch (e) {}
-  var h = function () { if (v.currentTime > 0.04) { v.removeEventListener('timeupdate', h); show(); } }; v.addEventListener('timeupdate', h);
-  v.addEventListener('playing', function () { setTimeout(show, 120); }, { once: true });
-  setTimeout(show, 800);
+  // 재생 시간이 실제로 흐르면(=장면이 그려지고 있음) 보임. '재생 시작' 신호만으로는 TV 가 아직 검은 화면일 수 있어 쓰지 않음
+  var h = function () { if (v.currentTime > 0.12) { v.removeEventListener('timeupdate', h); show(); } }; v.addEventListener('timeupdate', h);
+  setTimeout(show, 2500);  // 그래도 안 오면 강제로(숨겨진 채 남지 않게)
 }
 function play(v) {
   attach(v); hideUntilFrame(v);
