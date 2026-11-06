@@ -80,7 +80,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261105100554';
+var V = 'v261107005718';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -249,8 +249,21 @@ function play(v) {
 }
 // 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
 // 영상이 준비되기 전에는 그 아래 PNG 에 영상 첫 프레임이 그대로 들어 있어(tools/bake.py) 바뀌는 티가 나지 않음
+// 모든 영상을 처음에 한 번 메모리로 받아 둠(약 21MB) → 탭 이동 때 네트워크 버퍼링 없음. 받기 전이면 원래 주소로
+var BLOB = {};
 function attach(v) {
-  if (v.getAttribute('src')) return; v.src = v.dataset.src; v.preload = 'auto';
+  if (v.getAttribute('src')) return; v.src = BLOB[v.dataset.src] || v.dataset.src; v.preload = 'auto';
+}
+function prefetchAll() {
+  if (!window.fetch || !window.URL || !URL.createObjectURL) return;
+  var list = [];
+  slides.forEach(function (s) { allVideos(s).forEach(function (v) { if (list.indexOf(v.dataset.src) < 0) list.push(v.dataset.src); }); });
+  (function next(i, tries) {
+    if (i >= list.length) return;
+    fetch(list[i]).then(function (r) { if (!r.ok) throw 0; return r.blob(); })
+      .then(function (b) { BLOB[list[i]] = URL.createObjectURL(b); next(i + 1, 0); })
+      .catch(function () { setTimeout(function () { tries < 3 ? next(i, tries + 1) : next(i + 1, 0); }, 2000); });
+  })(0, 0);
 }
 // 장 그림을 넘기기 전에 미리 디코딩(디코딩 전 한 프레임 비어 보이는 깜빡임 방지). 이웃 장은 미리, 멀리 가는 탭 이동은 잠깐 기다렸다가
 function imgsOf(s) { return Array.prototype.slice.call(s.querySelectorAll('img')); }
@@ -358,6 +371,7 @@ function goNow(n) {
   }
 }
 go(0);
+setTimeout(prefetchAll, 1500);
 // 화면 방향이 바뀌면(가로↔세로) 그 배치로 다시 그림
 window.addEventListener('resize', function () { if (!FORCE && (window.innerHeight > window.innerWidth) !== PORT) location.reload(); });
 
