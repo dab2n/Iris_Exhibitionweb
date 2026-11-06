@@ -44,6 +44,13 @@
   #next.off{opacity:.3} .arrow.end{opacity:0}
   #next.ready{animation:ready .9s ease 2}
   @keyframes ready{50%{transform:scale(1.18)}}
+  /* 첫 장: 다음 버튼을 눌러 보라는 표시 — 퍼져 나가는 테두리 + 화살표가 오른쪽으로 살짝 밀림(반복) */
+  #next::before{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 2px rgba(17,17,17,.45);opacity:0}
+  #next.dark::before{box-shadow:0 0 0 2px rgba(255,255,255,.75)}
+  #next.hint::before{animation:hintRing 2.2s cubic-bezier(.25,.6,.3,1) infinite}
+  #next.hint::after{animation:hintArrow 2.2s ease-in-out infinite}
+  @keyframes hintRing{0%{transform:scale(1);opacity:.9}70%,100%{transform:scale(1.75);opacity:0}}
+  @keyframes hintArrow{0%,55%,100%{transform:translateX(-15%) rotate(-45deg)}25%{transform:translateX(15%) rotate(-45deg)}}
   #fsbtn{position:fixed;right:12px;bottom:12px;padding:8px 12px;border:0;border-radius:8px;z-index:9;
     background:rgba(255,255,255,.15);color:#fff;font:14px system-ui,sans-serif;cursor:pointer}
   body.fs #fsbtn{display:none}
@@ -80,7 +87,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261107005718';
+var V = 'v261107010401';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -350,7 +357,7 @@ function goNow(n) {
     }, 400);
   }
   cur = n; var el = slides[cur]; el.classList.add('on'); if (el.bg) document.body.style.background = el.bg; if (GROW[el.key] && !PORT) { el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow'); }
-  prevBtn.classList.toggle('end', n === 0); nextBtn.classList.toggle('end', n === slides.length - 1);
+  prevBtn.classList.toggle('end', n === 0); nextBtn.classList.toggle('hint', n === 0); nextBtn.classList.toggle('end', n === slides.length - 1);
   watchPlay(el);
   arrowTheme(el); document.body.classList.toggle('onto-slide', el.key === ONTO_SLIDE);
   warm(n);
