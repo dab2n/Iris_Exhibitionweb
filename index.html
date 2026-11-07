@@ -87,7 +87,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261107121653';
+var V = 'v261107122642';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -248,7 +248,8 @@ function hideUntilFrame(v) {
   if (v.requestVideoFrameCallback) try { v.requestVideoFrameCallback(function () { requestAnimationFrame(show); }); } catch (e) {}
   // 재생 시간이 실제로 흐르면(=장면이 그려지고 있음) 보임. '재생 시작' 신호만으로는 TV 가 아직 검은 화면일 수 있어 쓰지 않음
   var h = function () { if (v.currentTime > 0.12) { v.removeEventListener('timeupdate', h); show(); } }; v.addEventListener('timeupdate', h);
-  setTimeout(show, 2500);  // 그래도 안 오면 강제로(숨겨진 채 남지 않게)
+  // 2.5초 지나도 시간 신호가 없으면: 영상 그림이 실제로 준비됐을 때만 보임(준비 안 됐으면 계속 아래 이미지 → 검은 화면 대신)
+  (function force() { setTimeout(function () { if (v.hideTok !== tok) return; if (v.readyState >= 2 && v.currentTime > 0) show(); else force(); }, 2500); })();  // 그래도 안 오면 강제로(숨겨진 채 남지 않게)
 }
 function play(v) {
   attach(v); hideUntilFrame(v);
@@ -278,8 +279,10 @@ function prefetchAll() {
 // 장 그림을 넘기기 전에 미리 디코딩(디코딩 전 한 프레임 비어 보이는 깜빡임 방지). 이웃 장은 미리, 멀리 가는 탭 이동은 잠깐 기다렸다가
 function imgsOf(s) { return Array.prototype.slice.call(s.querySelectorAll('img')); }
 function decodeSlide(s) {
-  if (s.decoded) return Promise.resolve(); s.decoded = true;
-  return Promise.all(imgsOf(s).map(function (i) { return i.decode ? i.decode().catch(function () {}) : Promise.resolve(); }));
+  if (s.decP) return s.decP;
+  s.decP = Promise.all(imgsOf(s).map(function (i) { return i.decode ? i.decode().catch(function () {}) : Promise.resolve(); }))
+    .then(function () { s.decoded = true; });
+  return s.decP;
 }
 function detach(v) { if (v.getAttribute('src')) { v.pause(); v.removeAttribute('src'); v.load(); } }
 function allVideos(s) { return s.cam ? s.videos.concat([s.cam]) : s.videos; }
@@ -333,7 +336,7 @@ var goTok = 0;
 function go(n) {
   n = (n + slides.length) % slides.length; var tok = ++goTok, target = slides[n];
   if (target.decoded || target === slides[cur]) return goNow(n);
-  Promise.race([decodeSlide(target), new Promise(function (r) { setTimeout(r, 300); })]).then(function () { if (tok === goTok) goNow(n); });
+  Promise.race([decodeSlide(target), new Promise(function (r) { setTimeout(r, 700); })]).then(function () { if (tok === goTok) goNow(n); });
 }
 // 재생 감시: 들어온 뒤 0.7초·1.6초에 재생돼야 할 영상이 멈춰 있으면 다시 재생(기기에서 재생 요청이 묻히는 경우 대비)
 function watchPlay(el) {
