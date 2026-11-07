@@ -87,7 +87,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261107122642';
+var V = 'v261107125101';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -111,7 +111,7 @@ var SCROLL = {
 var SCROLL_MS = 1500, SCROLL_EASE = 'cubic-bezier(.65,0,.35,1)';  // 3차 ease-in-out: 천천히 출발 → 한 번에 쓱 → 부드럽게 멈춤(카메라 영상과 같은 곡선)
 // 카메라 영상(가로): 스크롤 장 전체 흐름(위 정렬로 나타남 → 4초 뒤 1.8초 동안 내려감 → 아래 영상)을 미리 렌더링한 한 편(tools/camera.sh).
 // 손으로 끌거나 휠을 돌리면 그때부터 긴 이미지로 바꿔 직접 움직임. loop = 이 초부터 끝까지 반복(null 이면 끝 장면에서 멈춤)
-var CAM = { '02-01': { loop: 5.5 }, '02-04': { loop: null }, '03-01': { loop: 0 } };
+var CAM = { '02-01': { loop: null }, '02-04': { loop: null }, '03-01': { loop: null } };  // 끝나면 마지막 장면에서 멈춤(반복 없음)
 function camOff(sc, t) { var p = Math.max(0, Math.min(1, (t * 1000 - sc.delay) / SCROLL_MS)); return sc.end * (p < .5 ? 4 * p * p * p : 1 - Math.pow(2 - 2 * p, 3) / 2); }
 // Research 02 그래프: s0 = 그래프 없는 배경, s1 = 줄무늬(40%) 없는 막대. 100%·44.2% 가 같이 차오르고, 100% 가 다 차면 40% 줄무늬가 차오름
 // Process 02 온톨로지: 화면 녹화를 장 안(피그마 '온톨로지 웹 화면' 자리, 모서리 12px)에 — 스크롤 뒤 손으로 움직일 때용(내려가는 동안은 카메라 영상)
@@ -145,7 +145,7 @@ function buildCanvas(key, ch, withVideo, vids) {
   if (withVideo) OVERLAYS.forEach(function (ov) {  // GIF 로 만든 움직이는 부분 (media/, tools/overlays.py 로 생성)
     if (ov.slide !== key) return;
     var v = document.createElement('video');
-    v.dataset.src = ov.src + '?' + V; v.muted = v.playsInline = true; v.loop = ov.loop !== false; v.preload = 'none'; v.after = ov.after;
+    v.dataset.src = ov.src + '?' + V; v.muted = v.playsInline = true; v.loop = false;  /* 반복 없음: 장에 들어올 때마다 처음부터 한 번, 끝나면 마지막 장면 유지 */ v.preload = 'none'; v.after = ov.after;
     v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
     v.style.left = ov.box[0] * 100 + '%'; v.style.top = ov.box[1] * 100 + '%';
     v.style.width = ov.box[2] * 100 + '%'; v.style.height = ov.box[3] * 100 + '%';
@@ -257,22 +257,21 @@ function play(v) {
 }
 // 영상은 지금 장과 앞뒤 장 것만 불러 두고 나머지는 놓아 줌(기기 영상 디코더가 모자라 깜빡이는 것 방지).
 // 영상이 준비되기 전에는 그 아래 PNG 에 영상 첫 프레임이 그대로 들어 있어(tools/bake.py) 바뀌는 티가 나지 않음
-// 모든 영상을 처음에 한 번 메모리로 받아 둠(약 21MB) → 탭 이동 때 네트워크 버퍼링 없음. 받기 전이면 원래 주소로
-var BLOB = {};
+// 모든 영상을 처음에 한 번 브라우저 캐시로 받아 둠(같은 주소 → 탭 이동 때 인터넷 대신 캐시). 메모리(blob)에는 안 둠(TV 메모리 부족)
 function attach(v) {
-  if (v.getAttribute('src')) return; v.src = BLOB[v.dataset.src] || v.dataset.src; v.preload = 'auto';
+  if (v.getAttribute('src')) return; v.src = v.dataset.src; v.preload = 'auto';
 }
 function prefetchAll() {
-  if (!window.fetch || !window.URL || !URL.createObjectURL) return;
+  if (!window.fetch) return;
   var list = [];
   slides.forEach(function (s) { allVideos(s).forEach(function (v) { if (list.indexOf(v.dataset.src) < 0) list.push(v.dataset.src); }); });
   (function next(i, tries) {
     if (i >= list.length) return;
     // 지금 장 영상이 아직 받는 중이면 기다림(미리 받기가 지금 보는 영상의 인터넷 속도를 뺏지 않게)
-    var busy = allVideos(slides[cur]).some(function (v) { return v.getAttribute('src') && !/^blob:/.test(v.src) && v.readyState < 4; });
+    var busy = allVideos(slides[cur]).some(function (v) { return v.getAttribute('src') && !v.ended && !v.paused && v.readyState < 4; });
     if (busy) return setTimeout(function () { next(i, tries); }, 1000);
-    fetch(list[i], { priority: 'low' }).then(function (r) { if (!r.ok) throw 0; return r.blob(); })
-      .then(function (b) { BLOB[list[i]] = URL.createObjectURL(b); next(i + 1, 0); })
+    fetch(list[i], { priority: 'low' }).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); })
+      .then(function () { next(i + 1, 0); })
       .catch(function () { setTimeout(function () { tries < 3 ? next(i, tries + 1) : next(i + 1, 0); }, 2000); });
   })(0, 0);
 }
@@ -344,7 +343,6 @@ function watchPlay(el) {
     if (el !== slides[cur] || onto.classList.contains('on')) return;
     allVideos(el).forEach(function (v) {
       var want = v === el.cam ? !el.manual : (!v.after || el.afterStarted) && (!el.cam || el.manual);
-      if (want && v.readyState < 2 && BLOB[v.dataset.src] && v.src !== BLOB[v.dataset.src]) { v.src = BLOB[v.dataset.src]; play(v); return; }  // 인터넷으로 받다 막힌 영상 → 받아 둔 것으로
       if (want && v.paused && !v.ended && v.getAttribute('src')) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
     });
   }, ms)); });
