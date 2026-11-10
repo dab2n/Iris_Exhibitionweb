@@ -87,7 +87,7 @@
 <button id="fsbtn" title="F 키로도 전체화면">전체화면</button>
 <script>
 // 배포 버전: 이미지·영상 주소 뒤에 붙여 기기 캐시에 남은 옛 파일 대신 새 파일을 받게 함(페이지 주소는 그대로). 배포할 때 tools/stamp.sh 가 바꿈
-var V = 'v261110123449';
+var V = 'v261110123715';
 document.write('<script src="media/overlays.js?' + V + '"><\/script><script src="media/portrait.js?' + V + '"><\/script>');
 </script>
 <script>
@@ -291,7 +291,7 @@ function warm(n) {
     var d = Math.min(Math.abs(i - n), slides.length - Math.abs(i - n));
     if (ENTRY.indexOf(i) >= 0) decodeSlide(s);  // 탭 첫 장은 그림만 미리(영상까지 미리 열면 TV 영상 디코더가 모자라 재생이 안 됨)
     // 영상은 지금 장 것만 연다(TV 영상 디코더가 모자라면 재생 중이어도 검게 나옴). 이웃 장은 그림만 미리, 영상은 캐시에서 바로
-    allVideos(s).forEach(d === 0 ? attach : function (v) { if (s !== slides[cur] && !s.classList.contains('prev')) detach(v); });
+    allVideos(s).forEach(d === 0 ? function (v) { if (!s.cam || v === s.cam || s.manual) attach(v); } : function (v) { if (s !== slides[cur] && !s.classList.contains('prev')) detach(v); });
     if (d <= 1) decodeSlide(s);
   });
 }
